@@ -1,0 +1,88 @@
+---
+title: Getting The API
+description: Add the InventoryTracker API as a dependency to your project.
+---
+
+<Tabs items={['Maven', 'Gradle (Groovy)', 'Gradle (Kotlin)']}>
+    <Tab value="Maven">
+        You need to add the dependency to your `pom.xml`.
+
+        ```xml
+        <repository>
+          <id>reposilite-repository-releases</id>
+          <name>Reposilite Repository</name>
+          <url>https://repo.athlas.club/releases</url>
+        </repository>
+        ```
+
+        ```xml
+        <dependency>
+          <groupId>me.gurwi</groupId>
+          <artifactId>InventoryTrackerAPI</artifactId>
+          <version>1.0.2</version>
+        </dependency>
+        ```
+    </Tab>
+    <Tab value="Gradle (Groovy)">
+        You need to add the dependency to your `build.gradle`.
+
+        ```gradle
+        maven {
+            name "athlasDevRepositoryReleases"
+            url "https://repo.athlas.club/releases"
+        }
+        ```
+
+        ```gradle
+        compileOnly "me.gurwi:InventoryTrackerAPI:1.0.2"
+        ```
+    </Tab>
+    <Tab value="Gradle (Kotlin)">
+        You need to add the dependency to your `build.gradle.kts`.
+
+        ```gradle
+        maven {
+            name = "reposiliteRepositoryReleases"
+            url = uri("https://repo.athlas.club/releases")
+        }
+        ```
+
+        ```gradle
+        compileOnly("me.gurwi:InventoryTrackerAPI:1.0.2")
+        ```
+    </Tab>
+</Tabs>
+
+```java
+package me.gurwi.example;
+
+import me.gurwi.inventorytracker.api.InventoryTrackerAPI;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class InventoryTrackerExample extends JavaPlugin {
+
+    private InventoryTrackerAPI inventoryTrackerAPI;
+
+    @Override
+    public void onEnable() {
+        inventoryTrackerAPI = InventoryTrackerAPI.getAPI();
+
+        if (inventoryTrackerAPI == null) {
+            getLogger().severe("Inventory tracker is not loaded!");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+    }
+
+    @Override
+    public void onDisable() {
+
+    }
+
+    public InventoryTrackerAPI getInventoryTrackerAPI() {
+        return inventoryTrackerAPI;
+    }
+
+}
+```

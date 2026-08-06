@@ -1,0 +1,34 @@
+---
+title: Usage
+description: Save and retrieve player inventory logs through the InventoryTracker API.
+---
+
+## Saving a new Inventory Log
+
+```java
+public void save(Player player, Player savedBy) {
+    SaveReason saveReason = new SaveReason(LogType.FORCED); // IT CAN CONTAIN KILLER DATA TO
+    GenericStats genericStats = new GenericStats(player); // CONTAINS PLAYER LOCATION AND EXP
+
+    inventoryTrackerAPI.getInventoryTrackerDB()
+            .saveInventory(player.getUniqueId(), saveReason, savedBy.getUniqueId(), player.getInventory(), genericStats, "Some Description")
+            .thenAccept(savedInventory -> {
+                // DO SOMETHING
+            });
+
+}
+```
+
+## Getting a player Inventory Logs
+
+```java
+public void getSavedInventories(Player player) {
+
+    inventoryTrackerAPI.getInventoryTrackerDB()
+            .getPlayerSavedInventories(player)
+            .thenAccept(savedInventories -> {
+                // DO SOMETHING
+            });
+
+}
+```
