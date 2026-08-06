@@ -1,0 +1,37 @@
+---
+title: LEU File
+description: The loademup.yml file defines which actions a plugin officially supports under LoadEmUp.
+---
+
+The `loademup.yml` file defines which **actions** are officially supported by a plugin when managed through LoadEmUp. This helps LoadEmUp determine which operations (like load, reload, enable) are safe and compatible for that specific plugin.
+
+### ❓ How to use
+
+To declare which actions your plugin safely supports when managed by **LoadEmUp**, simply include a `loademup.yml` file in your plugin's resources folder — right alongside your `plugin.yml`.
+
+This helps server admins and LoadEmUp itself understand what operations (like reload or enable) are safe to perform on your plugin.
+
+📁 **File Location**
+
+Place it in: `src/main/resources/loademup.yml`
+
+### 📄 Example
+
+```yaml title="loademup.yml"
+version: 0.1.0
+supported: false
+
+supported-actions:
+  - LOAD
+  - UNLOAD
+  - RELOAD
+  - ENABLE
+  - DISABLE
+  - ALL
+```
+
+### 🔍 Fields
+
+- `version`: The schema version of the `loademup.yml` file.
+- `supported`: Whether the plugin supports LoadEmUp's dynamic management system.
+- `supported-actions`: A list of allowed actions (`LOAD`, `UNLOAD`, `RELOAD`, `ENABLE`, `DISABLE`, `ALL`) that are considered safe for this plugin.

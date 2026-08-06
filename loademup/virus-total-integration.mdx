@@ -1,0 +1,34 @@
+---
+title: Virus Total Integration
+description: Configure LoadEmUp's VirusTotal scanning feature.
+---
+
+<Callout type="info">
+    To use LoadEmUp's virus scanning feature, you need a [VirusTotal](https://www.virustotal.com/gui/join-us) account. Make sure to create one and configure your API key accordingly.
+</Callout>
+
+<Callout type="info">
+    Need help? Join our [Discord](https://dev.athlas.club) for support and bug reports.
+</Callout>
+
+## ⚙️ Setup
+
+1. **Get Your VirusTotal API Key**
+   Go directly to [VirusTotal](https://www.virustotal.com/gui/) and after logging in, go to your profile settings → **API Key** section. Copy the provided API key.
+
+2. **Add the API Key to LoadEmUp Config**
+   Open `config.yml` in your LoadEmUp plugin folder, find the `virus-scanner` section, and update it like this:
+
+   ```yaml title="config.yml"
+   virus-scanner:
+     enabled: true
+     vt-key: "YOUR_API_KEY_HERE"
+   ```
+
+   Replace `"YOUR_API_KEY_HERE"` with your actual API key.
+
+3. **Save and Restart Your Server**
+   Save the config file and restart your server to apply the changes. Or run the command `/loademup reload LoadEmUp`.
+
+4. **Wait for the VirusTotal client to Initialize**
+   There is a short period where the VirusTotal client will be in a loading state to check if your API Key is valid. After this short period you can start scanning `.jar` files using the `/loademup scan <file>` command.
