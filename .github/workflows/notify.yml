@@ -38,5 +38,5 @@ jobs:
           echo "Please check:"
           echo "  - REVALIDATE_URL is set correctly: ${{ secrets.REVALIDATE_URL }}"
           echo "  - REVALIDATE_SECRET is configured"
-          echo "  - Your site is accessible and the /api/revalidate endpoint exists"
+          echo "  - Your site is accessible and the /api/v1/revalidate endpoint exists"
           exit 1
