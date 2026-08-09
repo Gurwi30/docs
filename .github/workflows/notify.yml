@@ -1,27 +1,23 @@
 name: Revalidate Documentation
+
 on:
   push:
     branches: [main, master]
     paths:
-      - '**/*.mdx'
-      - '**/*.md'
-      - '**/meta.json'
+      - "**/*.mdx"
+      - "**/*.md"
+      - "**/meta.json"
 
 jobs:
   notify:
     runs-on: ubuntu-latest
+
     steps:
       - name: Trigger revalidation
         run: |
-          curl -X POST ${{ secrets.REVALIDATE_URL }}/api/v1/revalidate \
+          curl --fail-with-body \
             -H "Authorization: Bearer ${{ secrets.REVALIDATE_SECRET }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "repository": "${{ github.repository }}",
-              "branch": "${{ github.ref_name }}",
-              "commit": "${{ github.sha }}"
-            }' \
-            --fail-with-body
+            "${{ secrets.REVALIDATE_URL }}/api/v1/revalidate"
 
       - name: Revalidation success
         if: success()
@@ -36,7 +32,8 @@ jobs:
         run: |
           echo "❌ Failed to trigger documentation revalidation"
           echo "Please check:"
-          echo "  - REVALIDATE_URL is set correctly: ${{ secrets.REVALIDATE_URL }}"
+          echo "  - REVALIDATE_URL is set correctly"
           echo "  - REVALIDATE_SECRET is configured"
-          echo "  - Your site is accessible and the /api/v1/revalidate endpoint exists"
+          echo "  - Your site is accessible"
+          echo "  - The /api/v1/revalidate endpoint exists"
           exit 1
