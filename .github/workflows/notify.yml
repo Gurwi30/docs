@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Trigger revalidation
         run: |
-          curl -X POST ${{ secrets.REVALIDATE_URL }}/api/revalidate \
+          curl -X POST ${{ secrets.REVALIDATE_URL }}/api/v1/revalidate \
             -H "Authorization: Bearer ${{ secrets.REVALIDATE_SECRET }}" \
             -H "Content-Type: application/json" \
             -d '{
