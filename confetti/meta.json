@@ -1,6 +1,6 @@
 {
     "title": "Confetti",
-    "icon": "party-popper",
+    "icon": "PartyPopper",
     "root": true,
     "pages": ["index", "getting-started", "configuration", "annotations", "resource-config", "serialization"]
 }
