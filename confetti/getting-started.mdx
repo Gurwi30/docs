@@ -1,0 +1,88 @@
+---
+title: Getting Started
+description: Install Confetti and load your first YAML configuration.
+---
+
+## Installation
+
+Confetti currently targets Java 21+ and is distributed as a Gradle project.
+
+```bash
+git clone https://github.com/Gurwi30/confetti.git
+cd confetti
+./gradlew build
+```
+
+On Windows:
+
+```powershell
+git clone https://github.com/Gurwi30/confetti.git
+cd confetti
+.\\gradlew.bat build
+```
+
+## Your First Configuration
+
+Create `config.yml`:
+
+```yaml
+server:
+  host: localhost
+  port: 8080
+
+database:
+  enabled: true
+```
+
+Load it from a file:
+
+```java
+import dev.gurwi.confetti.Confetti;
+import dev.gurwi.confetti.configuration.base.Configuration;
+
+Confetti confetti = new Confetti();
+
+Configuration config = confetti
+        .fromFile("config.yml")
+        .load();
+
+String host = config.getString("server.host");
+Integer port = config.getInt("server.port");
+Boolean enabled = config.getBool("database.enabled");
+```
+
+## Classpath Resources
+
+For bundled read-only YAML files, place the resource in `src/main/resources`:
+
+```text
+src/
+└── main/
+    └── resources/
+        └── defaults.yml
+```
+
+Load it directly:
+
+```java
+Configuration config = confetti
+        .fromResource("defaults.yml")
+        .load();
+```
+
+Or use `@ResourceConfig` for annotation-based configuration:
+
+```java
+@ResourceConfig("defaults.yml")
+public class Defaults {
+
+    @Path("server.host")
+    public static String HOST;
+}
+```
+
+Then load the class:
+
+```java
+confetti.load(Defaults.class);
+```

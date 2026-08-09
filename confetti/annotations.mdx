@@ -1,0 +1,83 @@
+---
+title: Annotations
+description: Map YAML configuration values directly into Java classes and fields.
+---
+
+Confetti provides `@Config`, `@ResourceConfig`, and `@Path` for annotation-based configuration.
+
+## @Config
+
+`@Config` maps a class to a filesystem configuration:
+
+```java
+@Config(
+    value = "config.yml",
+    autoSave = true
+)
+public class AppConfig {
+}
+```
+
+It can also specify a default classpath resource:
+
+```java
+@Config(
+    value = "config.yml",
+    defaultResource = "config.yml"
+)
+public class AppConfig {
+}
+```
+
+If the target file does not exist, the default resource is used to create it.
+
+## @ResourceConfig
+
+`@ResourceConfig` maps a class to a classpath resource:
+
+```java
+@ResourceConfig("defaults.yml")
+public class Defaults {
+}
+```
+
+The resource is resolved through the application's classloader and is read-only.
+
+A class should use either `@Config` or `@ResourceConfig` as its configuration source.
+
+## @Path
+
+`@Path` maps a static field to a YAML path:
+
+```java
+@Path("server.host")
+public static String HOST;
+```
+
+Example:
+
+```java
+@Config("config.yml")
+public class AppConfig {
+
+    @Path("server.host")
+    public static String HOST = "localhost";
+
+    @Path("server.port")
+    public static Integer PORT = 8080;
+}
+```
+
+Load it with:
+
+```java
+Confetti confetti = new Confetti();
+confetti.load(AppConfig.class);
+```
+
+The values are then available through the fields:
+
+```java
+System.out.println(AppConfig.HOST);
+System.out.println(AppConfig.PORT);
+```

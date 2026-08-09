@@ -1,0 +1,72 @@
+---
+title: ResourceConfig
+description: Load read-only YAML configuration directly from the Java classpath.
+---
+
+`@ResourceConfig` is used when configuration should be bundled with the application and loaded from the classpath instead of a writable file.
+
+## Basic Usage
+
+Create `defaults.yml` in `src/main/resources`:
+
+```yaml
+server:
+  host: localhost
+  port: 8080
+
+database:
+  enabled: true
+```
+
+Then annotate a class:
+
+```java
+import dev.gurwi.confetti.annotation.Path;
+import dev.gurwi.confetti.annotation.ResourceConfig;
+
+@ResourceConfig("defaults.yml")
+public class Defaults {
+
+    @Path("server.host")
+    public static String HOST;
+
+    @Path("server.port")
+    public static Integer PORT;
+
+    @Path("database.enabled")
+    public static Boolean DATABASE_ENABLED;
+}
+```
+
+Load it with:
+
+```java
+Confetti confetti = new Confetti();
+confetti.load(Defaults.class);
+```
+
+## Resource Paths
+
+Nested classpath resources can be referenced by their resource path:
+
+```java
+@ResourceConfig("config/defaults.yml")
+public class Defaults {
+}
+```
+
+## Read-Only Behavior
+
+Resource configurations are read-only and are intended for bundled defaults or other application resources.
+
+Use `@Config` when the configuration needs to be modified or saved.
+
+## Reloading
+
+Resource configurations are not included in `reloadAll()`.
+
+Load the annotated class again when you need to read the resource again:
+
+```java
+confetti.load(Defaults.class);
+```

@@ -1,0 +1,4 @@
+{
+    "title": "Confetti",
+    "pages": ["index", "getting-started", "configuration", "annotations", "resource-config", "serialization"]
+}

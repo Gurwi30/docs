@@ -1,0 +1,116 @@
+---
+title: Configuration
+description: Load, read, modify, save, and reload Confetti configurations.
+---
+
+## File Configuration
+
+Create a configuration from a file:
+
+```java
+FileConfiguration config = confetti
+        .fromFile("config.yml")
+        .load();
+```
+
+A parent directory can also be supplied:
+
+```java
+FileConfiguration config = confetti
+        .fromFile("config.yml", dataFolder)
+        .load();
+```
+
+## Resource Configuration
+
+Load a YAML file from the classpath:
+
+```java
+ResourceConfiguration config = confetti
+        .fromResource("defaults.yml")
+        .load();
+```
+
+Resource configurations are read-only.
+
+## Reading Values
+
+```java
+String name = config.getString("server.name");
+Integer port = config.getInt("server.port");
+Long timeout = config.getLong("server.timeout");
+Double ratio = config.getDouble("server.ratio");
+Float scale = config.getFloat("server.scale");
+Boolean enabled = config.getBool("server.enabled");
+```
+
+Retrieve an arbitrary value:
+
+```java
+Object value = config.get("server.name");
+```
+
+Provide a default:
+
+```java
+Object value = config.get("server.name", "localhost");
+```
+
+## Nested Paths
+
+Given:
+
+```yaml
+database:
+  connection:
+    host: localhost
+    port: 5432
+```
+
+Use dot-separated paths:
+
+```java
+String host = config.getString("database.connection.host");
+Integer port = config.getInt("database.connection.port");
+```
+
+## Modifying Configuration
+
+File configurations can be modified with `set`:
+
+```java
+config.set("server.port", 8080);
+config.set("server.enabled", true);
+```
+
+Create sections with:
+
+```java
+config.createSection("database");
+```
+
+Save explicitly with:
+
+```java
+((FileConfiguration) config).save();
+```
+
+With `autoSave = true`, changes are saved automatically for annotation-based file configurations.
+
+Resource configurations are read-only.
+
+## Reloading
+
+Reload a file configuration:
+
+```java
+config.reload();
+```
+
+Reload all registered file configurations:
+
+```java
+confetti.reloadAll();
+```
+
+When annotation-based configurations are used, `reloadAll()` restores initial field values and loads the current values from the files again.

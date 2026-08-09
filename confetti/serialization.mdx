@@ -1,0 +1,38 @@
+---
+title: Serialization
+description: Register custom serializers and deserializers for your own Java types.
+---
+
+Confetti supports custom serializers and deserializers for types that need special YAML handling.
+
+## Custom Serializer
+
+```java
+confetti.registerSerializer(MyType.class, value -> {
+    return ...;
+});
+```
+
+## Custom Deserializer
+
+```java
+confetti.registerDeserializer(MyType.class, (element, type) -> {
+    return ...;
+});
+```
+
+## Combined Serializer and Deserializer
+
+```java
+confetti.registerSerDe(MyType.class, mySerDe);
+```
+
+## Typed Values
+
+Custom types can be requested through the configuration API when a matching deserializer is registered:
+
+```java
+MyType value = config.get("server.object", MyType.class);
+```
+
+Custom serializers are used when values of the registered type are written to YAML.
