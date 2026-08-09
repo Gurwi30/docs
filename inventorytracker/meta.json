@@ -1,6 +1,6 @@
 {
     "title": "InventoryTracker",
-    "icon": "Toolbox",
+    "icon": "ToolCase",
     "root": true,
     "pages": [
         "index",
