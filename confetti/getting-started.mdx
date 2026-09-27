@@ -15,36 +15,51 @@ Confetti requires:
 
 Confetti is available on Maven Central.
 
-<Tabs items={['Maven', 'Gradle (Groovy)', 'Gradle (Kotlin)']}>
+<Tabs items={['Maven', 'Gradle (Groovy)', 'Gradle (Kotlin)']}> <Tab value="Maven">
 
-```xml tab="Maven"
-<dependency>
+Add the dependency to your `pom.xml`.
+
+<pre>
+{`<dependency>
     <groupId>dev.gurwi</groupId>
     <artifactId>confetti</artifactId>
     <version>0.1.3</version>
-</dependency>
-```
+</dependency>`}
+</pre>
 
-```groovy tab="Gradle (Groovy)"
-repositories {
+</Tab>
+
+<Tab value="Gradle (Groovy)">
+
+Add the dependency to your `build.gradle`.
+
+<pre>
+{`repositories {
     mavenCentral()
 }
 
 dependencies {
     implementation "dev.gurwi:confetti:0.1.3"
-}
-```
+}`}
+</pre>
 
-```kotlin tab="Gradle (Kotlin)"
-repositories {
+</Tab>
+
+<Tab value="Gradle (Kotlin)">
+
+Add the dependency to your `build.gradle.kts`.
+
+<pre>
+{`repositories {
     mavenCentral()
 }
 
 dependencies {
     implementation("dev.gurwi:confetti:0.1.3")
-}
-```
+}`}
+</pre>
 
+</Tab>
 </Tabs>
 
 <a href="https://central.sonatype.com/artifact/dev.gurwi/confetti"><img src="https://img.shields.io/badge/View%20on%20Maven%20Central-0.1.3-030711?style=for-the-badge&labelColor=030711&color=0b1220" alt="View on Maven Central" /></a>
