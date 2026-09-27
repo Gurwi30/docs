@@ -19,21 +19,27 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.REVALIDATE_SECRET }}" \
             "${{ secrets.REVALIDATE_URL }}/api/v1/revalidate"
 
-      - name: Revalidation success
+      - name: Trigger Netlify deploy
+        run: |
+          curl --fail-with-body \
+            -X POST \
+            "${{ secrets.NETLIFY_BUILD_HOOK }}"
+
+      - name: Deployment triggered
         if: success()
         run: |
-          echo "✅ Documentation revalidated successfully"
+          echo "✅ Documentation revalidated and Netlify deployment triggered"
           echo "Repository: ${{ github.repository }}"
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
 
-      - name: Revalidation failed
+      - name: Deployment failed
         if: failure()
         run: |
-          echo "❌ Failed to trigger documentation revalidation"
+          echo "❌ Documentation revalidation or Netlify deployment failed"
           echo "Please check:"
           echo "  - REVALIDATE_URL is set correctly"
           echo "  - REVALIDATE_SECRET is configured"
+          echo "  - NETLIFY_BUILD_HOOK is configured"
           echo "  - Your site is accessible"
-          echo "  - The /api/v1/revalidate endpoint exists"
           exit 1
