@@ -15,51 +15,47 @@ Confetti requires:
 Confetti is available on Maven Central.
 
 <Tabs items={['Maven', 'Gradle (Groovy)', 'Gradle (Kotlin)']}> <Tab value="Maven">
-
 Add the dependency to your `pom.xml`.
 
-<pre>
-{`<dependency>
-    <groupId>dev.gurwi</groupId>
-    <artifactId>confetti</artifactId>
-    <version>0.1.3</version>
-</dependency>`}
-</pre>
+```
+<CodeBlock lang="xml">
+  {`<dependency>
+<groupId>dev.gurwi</groupId>
+<artifactId>confetti</artifactId>
+<version>0.1.3</version>
+```
 
-</Tab>
+</dependency>`} </CodeBlock> </Tab>
 
-<Tab value="Gradle (Groovy)">
+  <Tab value="Gradle (Groovy)">
+    Add the dependency to your `build.gradle`.
 
-Add the dependency to your `build.gradle`.
+```
+<CodeBlock lang="groovy">
+  {`repositories {
+mavenCentral()
+```
 
-<pre>
-{`repositories {
-    mavenCentral()
 }
 
 dependencies {
-    implementation "dev.gurwi:confetti:0.1.3"
-}`}
-</pre>
+implementation "dev.gurwi:confetti:0.1.3"
+}`} </CodeBlock> </Tab>
 
-</Tab>
+  <Tab value="Gradle (Kotlin)">
+    Add the dependency to your `build.gradle.kts`.
 
-<Tab value="Gradle (Kotlin)">
+```
+<CodeBlock lang="kotlin">
+  {`repositories {
+mavenCentral()
+```
 
-Add the dependency to your `build.gradle.kts`.
-
-<pre>
-{`repositories {
-    mavenCentral()
 }
 
 dependencies {
-    implementation("dev.gurwi:confetti:0.1.3")
-}`}
-</pre>
-
-</Tab>
-</Tabs>
+implementation("dev.gurwi:confetti:0.1.3")
+}`} </CodeBlock> </Tab> </Tabs>
 
 <a href="https://central.sonatype.com/artifact/dev.gurwi/confetti"><img src="https://img.shields.io/badge/View%20on%20Maven%20Central-0.1.3-030711?style=for-the-badge&labelColor=030711&color=0b1220" alt="View on Maven Central" /></a>
 
