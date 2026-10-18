@@ -1,0 +1,124 @@
+---
+title: Getting Started
+description: Install Prism, create a platform and register your first command.
+---
+
+## Requirements
+
+- **Java 17** or newer for building (the library targets Java 17)
+- A Spigot or Paper server. Minecraft **1.13 → 1.21** and **26.x** have Brigadier adapters; see [Platforms](/prism/platforms/overview) and [Brigadier](/prism/platforms/brigadier#version-support) for the exact versions
+
+## Installation
+
+Prism is published on Maven Central under the group ID `dev.gurwi`.
+
+| Server software | Artifact ID |
+| --- | --- |
+| Paper | `prism-paper` |
+| Spigot | `prism-spigot` |
+
+Each artifact is a self-contained bundle that already includes the core, the Bukkit layer and the matching Brigadier adapters, so you only add **one** dependency.
+
+<Tabs items={['Gradle (Kotlin)', 'Gradle (Groovy)', 'Maven']}>
+  <Tab value="Gradle (Kotlin)">
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("dev.gurwi:prism-paper:1.0.0-beta.2")
+}
+```
+  </Tab>
+  <Tab value="Gradle (Groovy)">
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'dev.gurwi:prism-paper:1.0.0-beta.2'
+}
+```
+  </Tab>
+  <Tab value="Maven">
+```xml
+<dependency>
+    <groupId>dev.gurwi</groupId>
+    <artifactId>prism-paper</artifactId>
+    <version>1.0.0-beta.2</version>
+</dependency>
+```
+  </Tab>
+</Tabs>
+
+Swap `prism-paper` for `prism-spigot` if you target Spigot. The individual modules (`prism-core`, `prism-bukkit`, `prism-brigadier` and `prism-brigadier-minecraft`) are published too, but most projects should use a bundle.
+
+<Callout type="warn">
+  Prism is a **library, not a standalone plugin**. Shade it into your own plugin jar (for example with the [Shadow](https://github.com/GradleUp/shadow) plugin) and **relocate** it to avoid conflicts with other plugins that bundle Prism.
+</Callout>
+
+## 1. Create the platform
+
+Do this once, in `onEnable`.
+
+<Tabs items={['Paper', 'Spigot']}>
+  <Tab value="Paper">
+```java
+public class MyPlugin extends JavaPlugin {
+
+    private PaperPlatform platform;
+
+    @Override
+    public void onEnable() {
+        this.platform = PaperPlatform.configure(this).init();
+    }
+}
+```
+  </Tab>
+  <Tab value="Spigot">
+```java
+public class MyPlugin extends JavaPlugin {
+
+    private SpigotPlatform platform;
+
+    @Override
+    public void onEnable() {
+        this.platform = SpigotPlatform.configure(this).init();
+    }
+}
+```
+  </Tab>
+</Tabs>
+
+`configure(plugin)` returns a builder with a few options; see [Platform configuration](/prism/platforms/bukkit#platform-configuration).
+
+On startup Prism logs which registrar it chose:
+
+```text
+[prism] Command registration initialized using BRIGADIER.
+```
+
+`LEGACY` means Brigadier was disabled or could not be initialized on your server version, and commands are registered through the Bukkit command map instead. See [Troubleshooting](/prism/platforms/brigadier#troubleshooting).
+
+## 2. Build and register a command
+
+```java
+new PrismBukkitCommand("teleport", "tp")
+        .withDescription("Teleport yourself to a location")
+        .withPermission("myplugin.teleport")
+        .withArguments(new LocationArgument("location"))
+        .executesPlayer((player, args) -> {
+            Location location = args.get("location");
+            player.teleport(location);
+            player.sendMessage("Teleported!");
+        })
+        .register(platform);
+```
+
+The first constructor argument is the command name; any further strings are aliases. Tab completion, argument parsing and error messages come for free.
+
+## Trying the examples
+
+The repository ships a Paper test plugin that exercises most of the API. See [Building from Source](/prism/building-from-source#trying-it-on-a-server).

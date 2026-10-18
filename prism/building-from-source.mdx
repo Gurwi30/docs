@@ -1,0 +1,89 @@
+---
+title: Building from Source
+description: Project structure, building, testing and trying Prism on a live server.
+---
+
+## Project structure
+
+```text
+prism
+├── core/                  Platform-agnostic command model
+├── reflection/            Small reflection helpers shared across platform modules
+├── platform/
+│   ├── bukkit/            Shared Bukkit API layer
+│   ├── spigot/            Spigot platform and registry
+│   ├── paper/             Paper platform and registry
+│   ├── brigadier/         Platform-independent Brigadier builder and adapter
+│   │   └── minecraft/     V1_13 … V1_21, V26 and brigadier-paper adapters
+│   └── jda/               Discord (JDA) platform, in development
+├── publish/
+│   ├── paper/             Aggregates modules into the prism-paper bundle
+│   └── spigot/            Aggregates modules into the prism-spigot bundle
+├── gradle-plugin/
+│   └── spigot-nms/        Gradle plugin for Spigot NMS reobfuscation
+├── buildSrc/              Shared publishing conventions
+└── test/plugin/           Paper test plugin
+```
+
+## Requirements
+
+- A JDK that Gradle can use for toolchains. Gradle's toolchain resolver can download missing JDKs.
+- No separate Gradle install: use the wrapper.
+
+| Part | Java |
+| --- | --- |
+| Library (core, Bukkit layer, platforms) | 17 |
+| `V1_20`, `V1_21` adapters | 21 |
+| `V26` and `brigadier-paper` adapters | 25 |
+| Unit tests | 21 |
+| CI (`./gradlew test`) and the Paper test plugin | 25 |
+
+Each version adapter is compiled against its own Spigot version (and `brigadier-paper` against the Paper 26.3 dev bundle). The `spigot-nms` Gradle plugin in `gradle-plugin/` handles Spigot NMS reobfuscation for those modules.
+
+## Modules and bundles
+
+| Bundle | Contains |
+| --- | --- |
+| `prism-spigot` | core, Bukkit layer, Spigot platform, Brigadier layer and all version adapters except `brigadier-paper` |
+| `prism-paper` | core, Bukkit layer, Paper platform, Brigadier layer and the Paper adapter (plus the version adapters) |
+
+Published coordinates use the group `dev.gurwi` and the `prism-…` artifact IDs.
+
+## Build and test
+
+```bash
+git clone https://github.com/AthlasStudios/prism.git
+cd prism
+
+# Compile everything and build the jars
+./gradlew build
+
+# Run the test suite
+./gradlew test
+```
+
+On Windows, use `gradlew.bat`. Tests use JUnit with MockBukkit (`mockbukkit-v1.21`), so automated coverage targets a mocked 1.21 server.
+
+## Trying it on a server
+
+The `test/plugin` module exercises most of the API (subcommands, argument trees, flags, async and sync suggestions and many built-in arguments).
+
+```bash
+# Start a local Paper 26.3 server (Java 25) with the test plugin
+./gradlew :test:plugin:runServer
+
+# Or just build the plugin jar
+./gradlew :test:plugin:shadowJar
+```
+
+Its source, [`TestPlugin.java`](https://github.com/AthlasStudios/prism/blob/main/test/plugin/src/main/java/dev/gurwi/prism/test/plugin/TestPlugin.java), doubles as a set of usage examples.
+
+## Contributing
+
+1. [Open an issue](https://github.com/AthlasStudios/prism/issues) to discuss larger changes.
+2. Fork the repository and branch from `main`.
+3. Make your change and add or update tests.
+4. Run `./gradlew test`; CI runs the same check on every push and pull request.
+5. Open a pull request describing what changed and why.
+
+Prism is released under the [MIT License](https://opensource.org/license/mit).

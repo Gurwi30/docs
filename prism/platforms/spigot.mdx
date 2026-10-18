@@ -1,0 +1,104 @@
+---
+title: Spigot
+description: Using Prism on Spigot and Spigot forks.
+---
+
+| | |
+| --- | --- |
+| **Artifact** | `dev.gurwi:prism-spigot:1.0.0-beta.2` |
+| **Platform class** | `SpigotPlatform` (identifier `spigot`) |
+| **Status** | Supported |
+| **API baseline** | Spigot 1.13.2 |
+| **Brigadier adapters** | `V1_13` … `V1_21` and `V26`, see [Brigadier](/prism/platforms/brigadier#version-support) |
+| **Java** | 17 baseline (adapters for newer servers follow the Java those servers need) |
+
+## Installation
+
+<Tabs items={['Gradle (Kotlin)', 'Gradle (Groovy)', 'Maven']}>
+  <Tab value="Gradle (Kotlin)">
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("dev.gurwi:prism-spigot:1.0.0-beta.2")
+}
+```
+  </Tab>
+  <Tab value="Gradle (Groovy)">
+```groovy
+dependencies {
+    implementation 'dev.gurwi:prism-spigot:1.0.0-beta.2'
+}
+```
+  </Tab>
+  <Tab value="Maven">
+```xml
+<dependency>
+    <groupId>dev.gurwi</groupId>
+    <artifactId>prism-spigot</artifactId>
+    <version>1.0.0-beta.2</version>
+</dependency>
+```
+  </Tab>
+</Tabs>
+
+The bundle contains the core, the Bukkit layer and **every** version adapter except the Paper one. Shade and relocate it into your plugin.
+
+## Setup
+
+```java
+public class MyPlugin extends JavaPlugin {
+
+    private SpigotPlatform platform;
+
+    @Override
+    public void onEnable() {
+        this.platform = SpigotPlatform.configure(this).init();
+    }
+}
+```
+
+## Configuration
+
+| Option | Effect on Spigot |
+| --- | --- |
+| `disableBrigadier()` | Use legacy registration only. |
+| `disableLegacyRegistrar()`, `registerPermissions(boolean)`, `withGlobalLegacyCommandErrorHandler(handler)` | Accepted and stored; not yet consumed. See [Platform configuration](/prism/platforms/bukkit#platform-configuration). |
+
+`disableAsyncSuggestions()` is Paper-only and does not exist on `SpigotPlatformConfiguration.Builder`.
+
+## How registration works
+
+`SpigotCommandsRegistry` starts with the legacy registrar, then upgrades to Brigadier when it is enabled and the adapter loads:
+
+1. Create `LegacyCommandRegistrar`.
+2. Unless `disableBrigadier()` was called and if Brigadier is available, ask the provider loader for a dispatcher. On success, use `BrigadierCommandRegistrar`.
+3. Log `Command registration initialized using BRIGADIER` or `LEGACY`.
+
+Adapter resolution and fallback rules are in [Brigadier](/prism/platforms/brigadier#how-the-adapter-is-chosen).
+
+## Async suggestions on Spigot
+
+Prism's async tab-completion bridge is **Paper-only**. On Spigot:
+
+- With Brigadier active, async suggestion suppliers work: Brigadier waits for the returned future.
+- On the **legacy** registrar there is no listener for `AsyncCommandSuggestEvent`, so an async supplier fails with `UnsupportedOperationException` ("Async suggestions are not supported on bukkit or they were disabled").
+
+<Callout type="warn">
+  `FlagArgument` uses an async supplier for its default suggestions, so on Spigot its tab completion depends on Brigadier being active.
+</Callout>
+
+## Spigot versus Paper
+
+| | Spigot | Paper |
+| --- | --- | --- |
+| Native Paper Brigadier adapter | No | Tried first when Paper's Brigadier API is present |
+| Async tab-completion listener | No | Yes (`disableAsyncSuggestions()` turns it off) |
+| Async suggestions on the legacy registrar | Not supported | Supported (handler registered when legacy registration is active) |
+| Version adapters | All `V1_13` … `V26` | All `V1_13` … `V26` |
+
+## Tests
+
+The Spigot module has MockBukkit-based tests (on a mocked 1.21 server) for command registration, execution, permissions, requirements and tab completion on both registrars.

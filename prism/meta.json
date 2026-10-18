@@ -1,0 +1,27 @@
+{
+  "title": "Prism",
+  "root": true,
+  "icon": "Pyramid",
+  "pages": [
+    "index",
+    "getting-started",
+    "---Core---",
+    "core/overview",
+    "core/arguments",
+    "core/subcommands-and-trees",
+    "core/executors",
+    "core/requirements-and-permissions",
+    "core/suggestions",
+    "core/registration",
+    "---Platforms---",
+    "platforms/overview",
+    "platforms/bukkit",
+    "platforms/spigot",
+    "platforms/paper",
+    "platforms/brigadier",
+    "platforms/jda",
+    "---Advanced---",
+    "custom-platform",
+    "building-from-source"
+  ]
+}

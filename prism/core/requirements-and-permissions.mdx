@@ -1,0 +1,79 @@
+---
+title: Requirements and Permissions
+description: Restrict who can see and run commands and arguments.
+---
+
+`definition.canExecute(source)` is true only if the command's requirement passes **and every permission is granted**. On Bukkit platforms it additionally requires an executor for the sender type (see [Executors](/prism/core/executors#executors-affect-access)).
+
+## Permissions
+
+```java
+new PrismBukkitCommand("admin")
+        .withPermission("myplugin.admin", "myplugin.staff")
+        // ...
+```
+
+<Callout type="warn">
+  Multiple permissions are combined with **AND**: the sender needs `myplugin.admin` **and** `myplugin.staff`.
+</Callout>
+
+Built-in Bukkit permission nodes:
+
+| Node | Behavior |
+| --- | --- |
+| `BukkitPermission.of("node")` (what `withPermission("node")` creates) | Passes for operators or senders with the permission. |
+| `BukkitPermission.startsWith("prefix.")` | Passes for operators or senders with any effective permission starting with the (lower-cased) prefix. |
+| `CommandPermission.OP` | Operators (and holders of `*`). |
+| `CommandPermission.NONE` | Empty permission string. |
+
+A custom permission is a `PermissionNode<Permission, Source>`:
+
+```java
+public record AcmePermission(String node) implements PermissionNode<String, AcmeUser> {
+
+    @Override
+    public String permission() {
+        return node;
+    }
+
+    @Override
+    public boolean hasPermission(AcmeUser user) {
+        return user.hasPermission(node);
+    }
+}
+```
+
+Arguments can carry permissions too: `argument.withPermissions("node")` on any `BukkitArgument`.
+
+## Requirements
+
+A requirement is a `UsageRequirement<Source>`: `test(source)`, plus `and(other)` and `UsageRequirement.none()`. Calling `withRequirement(...)` repeatedly **combines** them with AND.
+
+Sender-typed shortcuts only restrict that sender type:
+
+```java
+new PrismBukkitCommand("fly")
+        .withPlayerRequirement(player -> player.getWorld().getName().equals("lobby"))
+        .executes((sender, args) -> sender.sendMessage("Flying enabled"))
+        .register(platform);
+```
+
+Here the requirement applies to players; a console sender is **not** affected, because the helper only tests senders of that type.
+
+| Helper | Sender |
+| --- | --- |
+| `withRequirement(requirement)` | Any source |
+| `withRequirement(Class, requirement)` | The given sender class |
+| `withPlayerRequirement` | `Player` |
+| `withConsoleRequirement` | Console |
+| `withRemoteConsoleRequirement` | Remote console |
+| `withProxyRequirement` | Proxied sender |
+| `withBlockRequirement` | Command block |
+
+`BukkitUsageRequirement` offers ready-made ones: `permissions("a", "b")`, `permission(BukkitPermission...)` (all must pass) and `isOp()`.
+
+Requirements can be attached to **individual arguments** with `withRequirement(...)`; `canUse(source)` evaluates it, and a failed requirement hides the argument from suggestions. Arguments can also be hidden from listings with `setListed(false)`.
+
+## Built-in help respects access
+
+[`CommandHelp`](/prism/platforms/bukkit#built-in-help) only shows entries the sender is allowed to run.

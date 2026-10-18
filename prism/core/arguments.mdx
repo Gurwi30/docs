@@ -1,0 +1,144 @@
+---
+title: Arguments
+description: Required, optional and custom arguments, and how to read their values.
+---
+
+## Required arguments
+
+Add required arguments with `withArguments(...)`. They are parsed in order, and values are read back by name from the `CommandArguments` object passed to your executor.
+
+```java
+new PrismBukkitCommand("give")
+        .withArguments(
+                new PlayerArgument("target"),
+                new MaterialArgument("material"),
+                new IntegerArgument("amount", 1, 64)
+        )
+        .executes((sender, args) -> {
+            Player target = args.get("target");
+            Material material = args.get("material");
+            int amount = args.get("amount");
+
+            target.getInventory().addItem(new ItemStack(material, amount));
+        })
+        .register(platform);
+```
+
+`args.get(...)` is generic, so the target type is inferred from the variable you assign it to. You can also pass the argument object itself:
+
+```java
+IntegerArgument amount = new IntegerArgument("amount", 1, 64);
+// ...
+int value = args.get(amount);
+```
+
+## Optional arguments
+
+Declare optional arguments with `withOptionalArguments(...)`. They always come after the required ones.
+
+```java
+new PrismBukkitCommand("number")
+        .withArguments(new IntegerArgument("number", 0, 10))
+        .withOptionalArguments(new FloatArgument("float", 0.1f, 9.9f))
+        .executes((sender, args) -> {
+            int number = args.get("number");
+            float scale = args.getOptional("float", 1.0f); // with a default
+            sender.sendMessage(number + " x " + scale);
+        })
+        .register(platform);
+```
+
+## Reading values: `CommandArguments`
+
+A `CommandArguments` holds the values of **one** command level and a link to its parent level, so arguments of parent commands stay reachable.
+
+### Local and chain lookups
+
+| Method | Behavior |
+| --- | --- |
+| `get(name)` | Value of the named argument **at this level**. Throws `IllegalArgumentException` ("Unknown argument: …") if missing. |
+| `get(argument)` | Searches this level and then the parents for the level that owns that argument object. |
+| `find(name)` / `find(argument)` | Same lookups returning `Optional<T>`. |
+| `getOptional(name)` / `getOptional(argument)` | `Optional<T>` (same lookup as `find`). |
+| `getOptional(name, default)` / `getOptional(argument, default)` | Value or default. |
+
+Passing the argument object is the way to reach a parent's value without a path.
+
+### Path lookups
+
+Paths use `/`, `..` and `.` segments. A leading `/` starts at the root; otherwise lookups start at the current level. Other segments are subcommand names, matched case-insensitively.
+
+| Method | Behavior |
+| --- | --- |
+| `getAt(path, key)` / `getAt(path, argument)` | Value at that level; throws if absent. |
+| `getOptionalAt(path, key)` / `getOptionalAt(path, argument)` | `Optional<T>`. |
+| `getOptionalAt(path, key, default)` | Value or default. |
+| `resolve(path)` | The `CommandArguments` at that path, as `Optional`. |
+
+### Navigating the tree
+
+| Method | Returns |
+| --- | --- |
+| `getDefinition()` | The definition of this level. |
+| `getParentDefinition()`, `getRootDefinition()`, `getDefinitionChain()` | Definition navigation. |
+| `getChildDefinitions()`, `getChildDefinition(name)` | Direct children. |
+| `resolveDefinition(path)` | Definition at a path, as `Optional`. |
+| `getParent()`, `getRoot()`, `getChain()` | The parent `CommandArguments` objects. |
+
+See [Subcommands](/prism/core/subcommands-and-trees#reading-parent-arguments) for examples.
+
+## Argument options
+
+| Option | Effect |
+| --- | --- |
+| `replaceSuggestions(...)` | Replace default suggestions. See [Suggestions](/prism/core/suggestions). |
+| `withRequirement(...)` | Attach a requirement; repeated calls are ANDed. `canUse(source)` evaluates it. |
+| `setListed(false)` | Hide the argument from listings. |
+
+## Grouping helpers
+
+`ArgumentGroup` applies one setting to several arguments at once:
+
+```java
+IntegerArgument[] numbers = ArgumentGroup.suggestions(
+        BukkitSuggestionsSupplier.strings(List.of("1", "10")),
+        new IntegerArgument("min"),
+        new IntegerArgument("max")
+);
+
+StringArgument[] staffOnly = ArgumentGroup.requirement(
+        sender -> sender.hasPermission("staff"),
+        new StringArgument("reason"),
+        new StringArgument("note")
+);
+```
+
+Both return the same array, so you can pass it straight to `withArguments(...)`.
+
+## Greedy arguments
+
+Greedy arguments (such as `GreedyStringArgument` and `FlagArgument`) consume the rest of the input. They **must be the last argument** of a command and **cannot have children**.
+
+## Writing your own argument
+
+Extend the platform's argument base class (for Bukkit, `BukkitArgument` or one of the base classes) and implement `parse(source, value)`. Throw `ArgumentParseException` for invalid input.
+
+```java
+public class AcmeIntegerArgument extends AcmeArgument<AcmeIntegerArgument, Integer> {
+
+    public AcmeIntegerArgument(String name) {
+        super(name, ctx -> List.of());
+    }
+
+    @Override
+    public Integer parse(AcmeUser source, String value) throws ArgumentParseException {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new ArgumentParseException(this, value, "'" + value + "' is not a number");
+        }
+    }
+}
+```
+
+The full catalog of Bukkit arguments is on the [Bukkit Layer](/prism/platforms/bukkit#built-in-argument-types) page.

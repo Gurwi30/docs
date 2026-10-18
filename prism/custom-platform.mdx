@@ -1,0 +1,198 @@
+---
+title: Custom Platform
+description: Implement Prism for any host in six steps.
+---
+
+`core` knows nothing about Minecraft, Discord or any other host. A platform supplies six things on top of it, and everything else comes for free. `platform/bukkit` is the full-featured reference; `platform/jda` is a minimal skeleton (see [JDA](/prism/platforms/jda)).
+
+```kotlin
+dependencies {
+    api("dev.gurwi:prism-core:1.0.0-beta.2")
+}
+```
+
+The examples use an imaginary chat service where the command *source* is an `AcmeUser`.
+
+## 1. Executor
+
+```java
+@FunctionalInterface
+public interface AcmeExecutor extends CommandExecutor<AcmeUser, AcmeCommandDefinition> {
+}
+```
+
+If your host has several kinds of senders, declare one executor interface per kind and register them under their own class, as `BukkitExecutorContainerBuilder` does.
+
+## 2. Permissions
+
+```java
+public record AcmePermission(String node) implements PermissionNode<String, AcmeUser> {
+
+    @Override
+    public String permission() {
+        return node;
+    }
+
+    @Override
+    public boolean hasPermission(AcmeUser user) {
+        return user.hasPermission(node);
+    }
+}
+```
+
+## 3. Arguments and suggestions
+
+Extend `AbstractArgument` with your source type and a `SuggestionsSupplier`. Implement `parse` and throw `ArgumentParseException` for invalid input.
+
+```java
+@FunctionalInterface
+public interface AcmeSuggestions<T> extends SuggestionsSupplier<AcmeUser, Collection<T>> {
+}
+
+public abstract class AcmeArgument<Impl extends AcmeArgument<Impl, T>, T>
+        extends AbstractArgument<Impl, T, AcmeUser, AcmeSuggestions<T>> {
+
+    public AcmeArgument(String name, AcmeSuggestions<T> defaultSuggestions) {
+        super(name, defaultSuggestions);
+    }
+}
+```
+
+For `then(...)` trees, extend `AbstractTreeArgument`, `AbstractTreeCommandBuilder` and `AbstractTreeCommandDefinition` instead.
+
+## 4. Command definition
+
+```java
+public class AcmeCommandDefinition extends AbstractCommandDefinition<
+        AcmeCommandDefinition, AcmeUser, AcmeExecutor, AcmeArgument<?, ?>, AcmePermission> {
+
+    protected AcmeCommandDefinition(@Nullable AcmeCommandDefinition parent, String name, List<String> aliases,
+                                    String description, UsageRequirement<AcmeUser> requirement,
+                                    Set<AcmePermission> permissions,
+                                    List<AcmeArgument<?, ?>> requiredArguments,
+                                    List<AcmeArgument<?, ?>> optionalArguments,
+                                    Map<Class<? extends AcmeExecutor>, AcmeExecutor> executors,
+                                    CommandChildrenFactory<AcmeCommandDefinition> childrenFactory) {
+        super(parent, name, aliases, description, requirement, permissions,
+                requiredArguments, optionalArguments, executors, childrenFactory);
+    }
+}
+```
+
+The base class provides `getName()`, `getAliases()`, `getChildren()`, `getChild(name)`, `getParent()`, `getExecutor(type)` and `canExecute(source)`.
+
+## 5. Builder
+
+```java
+public class AcmeCommandBuilder extends AbstractCommandBuilder<
+        AcmeCommandBuilder, AcmeCommandDefinition, AcmeUser, AcmeExecutor, AcmeArgument<?, ?>, AcmePermission> {
+
+    public AcmeCommandBuilder(String name, String... aliases) {
+        super(name, aliases);
+    }
+
+    public AcmeCommandBuilder executes(AcmeExecutor executor) {
+        return executes(AcmeExecutor.class, executor);
+    }
+
+    @Override
+    public AcmeCommandDefinition build(@Nullable AcmeCommandDefinition parent) {
+        return new AcmeCommandDefinition(parent, name, aliases, description, requirement, permissions,
+                requiredArguments, optionalArguments, executors, CommandChildrenFactory.create(children));
+    }
+}
+```
+
+`withDescription`, `withArguments`, `withOptionalArguments`, `withPermission`, `withRequirement`, `withSubCommands` and `register(...)` are inherited.
+
+## 6. Platform and registry
+
+```java
+public class AcmePlatform implements Platform<AcmeCommandsRegistry> {
+
+    private final AcmeCommandsRegistry registry = new AcmeCommandsRegistry(this);
+
+    @Override
+    public String getIdentifier() {
+        return "acme";
+    }
+
+    @Override
+    public AcmeCommandsRegistry getCommandsRegistry() {
+        return registry;
+    }
+}
+
+public class AcmeCommandsRegistry implements CommandsRegistry<AcmePlatform, AcmeCommandDefinition> {
+
+    private final AcmePlatform platform;
+    private final Set<AcmeCommandDefinition> commands = new HashSet<>();
+
+    public AcmeCommandsRegistry(AcmePlatform platform) {
+        this.platform = platform;
+    }
+
+    @Override
+    public void register(AcmeCommandDefinition definition) {
+        commands.add(definition);
+        // Tell your host about the command (name, aliases, description, ...)
+    }
+
+    @Override
+    public void unregister(AcmeCommandDefinition definition) {
+        commands.remove(definition);
+        // Remove it from your host
+    }
+
+    @Override
+    public @Unmodifiable Set<AcmeCommandDefinition> getRegisteredCommands() {
+        return Set.copyOf(commands);
+    }
+
+    @Override
+    public AcmePlatform getPlatform() {
+        return platform;
+    }
+}
+```
+
+## 7. Dispatching input
+
+Prism does not parse or run anything by itself. When your host receives input for a registered command, your registry (or a helper it owns):
+
+1. Walks the definition tree, matching subcommand names with `getChild(...)`.
+2. Checks `definition.canExecute(source)` and reports "no permission" if it fails.
+3. Parses raw tokens with each argument's `parse(source, token)`, honouring `canUse(source)`, collecting values into two maps keyed by argument name (required and optional). Catches `ArgumentParseException` and turns it into a user-facing message.
+4. Wraps the values in a `CommandArguments`, passing the parent's `CommandArguments` so `getAt("../", "key")` works.
+5. Looks up the executor with `definition.getExecutor(...)` and calls `run(source, args)`.
+
+```java
+CommandArguments<AcmeCommandDefinition, AcmeUser> args =
+        new CommandArguments<>(definition, requiredValues, optionalValues, parentArgs);
+
+definition.getExecutor(AcmeExecutor.class)
+        .ifPresentOrElse(
+                executor -> executor.run(user, args),
+                () -> user.sendMessage("This command cannot be run here.")
+        );
+```
+
+For suggestions, call each argument's `getSuggestionsSupplier().getSuggestions(new SuggestionContext<>(source, currentInput, currentRawArg))`.
+
+## Using it
+
+```java
+AcmePlatform platform = new AcmePlatform();
+
+new AcmeCommandBuilder("greet")
+        .withArguments(new AcmeIntegerArgument("times"))
+        .executes((user, args) -> {
+            int times = args.get("times");
+            user.sendMessage("Hello! ".repeat(times));
+        })
+        .register(platform);
+```
+
+<Callout>
+  Read `BukkitCommandsRegistry`, `LegacyCommandRegistrar` and `LegacyArgumentsParser` in `platform/bukkit` for a complete implementation of steps 6 and 7, including tab completion, flags and greedy arguments.
+</Callout>

@@ -1,0 +1,120 @@
+---
+title: Subcommands and Argument Trees
+description: Nest commands with withSubCommands and branch arguments with then.
+---
+
+## Subcommands
+
+Nest commands with `withSubCommands(...)`. A subcommand is just another builder of the same platform type; Prism links it to its parent when you pass it in.
+
+```java
+new PrismBukkitCommand("team", "t")
+        .withDescription("Team management")
+        .withSubCommands(
+                new PrismBukkitCommand("create")
+                        .withArguments(new StringArgument("name"))
+                        .executes((sender, args) -> {
+                            sender.sendMessage("Created team " + args.get("name"));
+                        }),
+
+                new PrismBukkitCommand("join")
+                        .withArguments(new StringArgument("name"))
+                        .executesPlayer((player, args) -> {
+                            player.sendMessage("Joined team " + args.get("name"));
+                        })
+        )
+        .register(platform);
+```
+
+Subcommand names must be unique among siblings: duplicates make building the parent definition fail.
+
+### Reading parent arguments
+
+A subcommand can read arguments from its parents by path:
+
+```java
+new PrismBukkitCommand("paint")
+        .withArguments(new ColorArgument("color"))
+        .withSubCommands(
+                new PrismBukkitCommand("call")
+                        .executes((sender, args) -> {
+                            // Read "color" from the parent command
+                            sender.sendMessage("Color: " + args.getAt("../", "color"));
+                        })
+        )
+        .register(platform);
+```
+
+Or, without a path, by passing the argument object:
+
+```java
+ColorArgument color = new ColorArgument("color");
+
+new PrismBukkitCommand("paint")
+        .withArguments(color)
+        .withSubCommands(
+                new PrismBukkitCommand("call")
+                        .executes((sender, args) -> sender.sendMessage("Color: " + args.get(color)))
+        )
+        .register(platform);
+```
+
+See [`CommandArguments`](/prism/core/arguments#reading-values-commandarguments) for every lookup method.
+
+## Argument trees
+
+When a command needs different follow-up arguments depending on the path taken, use `then(...)`. Each branch can carry its own executors.
+
+```java
+new PrismBukkitCommand("prism", "pri")
+        .withArguments(new ItemStackPredicateArgument("predicate"))
+        .then(
+                new MaterialArgument("material")
+                        .executes((sender, args) -> {
+                            Material material = args.get("material");
+                            sender.sendMessage("Selected material " + material);
+                        })
+        )
+        .then(
+                new GameModeArgument("gamemode")
+                        .executes((sender, args) -> {
+                            GameMode gameMode = args.get("gamemode");
+                            sender.sendMessage("Selected game mode " + gameMode);
+                        })
+        )
+        .register(platform);
+```
+
+Branches nest by calling `.then(...)` on an argument.
+
+### Chains
+
+A single `then(argument)` adds one **branch**; calling it several times adds sibling branches. Passing a **list or several arguments at once** (`then(List)` or the varargs form) instead nests them in order, one below the other:
+
+```java
+// Siblings: two alternative branches
+command.then(first).then(second);
+
+// Chain: first -> second -> third
+command.then(first, second, third);
+command.then(List.of(first, second, third));
+```
+
+The same applies when calling `then(...)` on an argument.
+
+### Validation
+
+<Callout type="warn">
+  Calling `then(...)` on an **argument** throws `IllegalArgumentException` if a child with the same name already exists under it ("… already has a child named …"), or if you try to add an argument beneath itself or one of its own descendants. Branches added directly to a command are not checked for duplicate names.
+</Callout>
+
+## Which should I use?
+
+| Use | When |
+| --- | --- |
+| Subcommands | The branch is chosen by a **literal name** (`/team create`, `/team join`). |
+| Argument trees | The branch is chosen by **what kind of value** follows (a material or a game mode). |
+
+<Callout>
+  Trees are built on `AbstractTreeArgument`, `AbstractTreeCommandBuilder` and `AbstractTreeCommandDefinition`. A custom platform that wants `then(...)` must extend those instead of the plain variants.
+</Callout>

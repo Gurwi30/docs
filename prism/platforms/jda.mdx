@@ -1,0 +1,38 @@
+---
+title: JDA (Discord)
+description: Status and shape of the Discord platform.
+---
+
+<Callout type="warn">
+  The JDA platform is a **skeleton** in `1.0.0-beta.2`. It is not published as an artifact and registration and dispatch are not implemented.
+</Callout>
+
+| | |
+| --- | --- |
+| **Module** | `platform/jda` |
+| **Identifier** | `jda` (`Prism.JDA_PLATFORM_IDENTIFIER`) |
+| **Library** | JDA 6.7.0 |
+| **Source type** | `net.dv8tion.jda.api.entities.User` |
+| **Published artifact** | None |
+
+## What exists
+
+The module defines the six pieces every platform needs, bound to JDA types:
+
+| Piece | Class |
+| --- | --- |
+| Executor | `JDACommandExecutor` (`CommandExecutor<User, JDACommandDefinition>`) |
+| Permission | `CommandPermission` (`PermissionNode<Permission, User>`) |
+| Argument and suggestions | `JDAArgument`, `JDASuggestionsSupplier` |
+| Definition | `JDACommandDefinition` |
+| Builder | `JDACommandBuilder` |
+| Platform and registry | `JDAPlatform`, `JDACommandsRegistry` |
+
+## What does not exist yet
+
+- `JDAPlatform` has a private constructor taking a `JDA` instance and no public factory.
+- `JDACommandsRegistry.register`/`unregister` are empty and `getRegisteredCommands()` returns an empty set.
+- `CommandPermission.hasPermission(...)` always returns `false`.
+- No concrete argument types or dispatch logic.
+
+Use it as a reference for how a non-Minecraft platform sits on top of core, and see [Custom Platform](/prism/custom-platform) for the full walkthrough.

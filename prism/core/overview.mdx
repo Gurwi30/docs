@@ -1,0 +1,86 @@
+---
+title: Core Overview
+description: The platform-agnostic command model that every Prism platform is built on.
+---
+
+The `core` module (`dev.gurwi:prism-core`) knows nothing about Minecraft, Discord or any other host. It defines the command model; a [platform](/prism/platforms/overview) supplies the host-specific pieces on top.
+
+<Callout>
+  Most users never touch `prism-core` directly: the `prism-paper` and `prism-spigot` bundles already include it. Add it on its own only when you are [implementing your own platform](/prism/custom-platform).
+</Callout>
+
+## Packages
+
+| Package (`dev.gurwi.prism…`) | Contents |
+| --- | --- |
+| `.` | `Prism`: constants (`SPIGOT_PLATFORM_IDENTIFIER`, `PAPER_PLATFORM_IDENTIFIER`, `JDA_PLATFORM_IDENTIFIER`, `DOCS`). |
+| `argument` | `AbstractArgument`, `AbstractTreeArgument`, `ArgumentGroup`, `CommandArguments`. |
+| `argument.suggestion` | `SuggestionsSupplier`, `SuggestionContext`. |
+| `command` | `AbstractCommandDefinition`, `AbstractTreeCommandDefinition`, `CommandExecutor`. |
+| `command.builder` | `AbstractCommandBuilder`, `AbstractTreeCommandBuilder`, `TreeBuilder`, `ExecutorContainerBuilder`, `RequirementContainerBuilder`, `CommandChildrenFactory`. |
+| `permission` | `PermissionNode`. |
+| `requirement` | `UsageRequirement`. |
+| `platform` | `Platform`, `CommandsRegistry`. |
+| `exception` | `ArgumentParseException`, `NoExecutorException`. |
+
+## Building blocks
+
+| Concept | Role |
+| --- | --- |
+| **Builder** (`AbstractCommandBuilder`) | The fluent API you write commands with: name, aliases, description, arguments, permissions, requirements, executors and children. |
+| **Definition** (`AbstractCommandDefinition`) | The immutable, built form of a command: `getName()`, `getAliases()`, `getDescription()`, `getRequirement()`, `getPermissions()`, `getRequiredArguments()`, `getOptionalArguments()`, `getExecutor(type)`, `getExecutors()`, `getChildren()`, `getChild(name)`, `getParent()` and `canExecute(source)`. |
+| **Argument** (`AbstractArgument`, `AbstractTreeArgument`) | A named, typed value parsed from input, with its own suggestions and requirement. |
+| **Executor** (`CommandExecutor`) | A functional interface `run(source, args)` invoked when a matching source runs the command. |
+| **Permission** (`PermissionNode`) | Wraps the host's native permission value: `permission()` and `hasPermission(source)`. |
+| **Requirement** (`UsageRequirement`) | A predicate on the source: `test(source)`, `and(other)` and `none()`. |
+| **Suggestions** (`SuggestionsSupplier`, `SuggestionContext`) | Produce completion candidates for an argument. |
+| **CommandArguments** | The parsed values handed to your executor, with access to the parent chain. |
+| **Platform / CommandsRegistry** | Identify the host and connect definitions to it. |
+
+## Type parameters
+
+Core types are generic over the host's *source* type (for Bukkit, `CommandSender`) plus the executor, argument and permission types, so the same logic works everywhere. A platform binds these once and exposes a concrete builder such as `PrismBukkitCommand`.
+
+## What core does and does not do
+
+Core **does**:
+
+- Model commands as a tree of definitions with arguments, executors, permissions and requirements.
+- Provide `canExecute(source)`: the requirement must pass **and every permission must be granted**.
+- Provide `CommandArguments` with typed access and parent-path lookups.
+- Validate trees (duplicate sibling argument names, cycles).
+
+Core **does not**:
+
+- Parse or run anything by itself. The platform's registry receives raw input and dispatches. See [Custom Platform](/prism/custom-platform#7-dispatching-input).
+
+## Command lifecycle
+
+1. You build a command with a platform builder.
+2. `.register(platform)` builds the definition and passes it to the registry; the registry announces it to the host.
+3. The host delivers input. The platform walks the tree, checks `canExecute`, parses tokens, builds `CommandArguments` and invokes the executor matching the sender.
+4. Parse failures raise `ArgumentParseException` (carrying the argument and the raw input), which the platform turns into a user-facing message.
+
+## Exceptions
+
+| Exception | When |
+| --- | --- |
+| `ArgumentParseException` (extends `IllegalArgumentException`) | An argument rejects its input. `getArgument()` and `getInput()` identify the failure. |
+| `NoExecutorException` (extends `IllegalStateException`) | No executor exists for a type ("No Executor available for type …"). |
+
+## Common builder methods
+
+Inherited from `AbstractCommandBuilder` by every platform builder:
+
+| Method | Purpose |
+| --- | --- |
+| `withDescription(String)` | Command description (default empty). |
+| `withArguments(...)` | Required arguments, parsed in order. |
+| `withOptionalArguments(...)` | Optional arguments, after the required ones. |
+| `withPermission(...)` | Permissions; **all** must be granted. |
+| `withRequirement(...)` | Usage requirement; repeated calls are combined with AND. |
+| `withSubCommands(...)` | Nested commands. |
+| `executes(type, executor)` | Executor registered under its type (platforms add sender-specific shortcuts). |
+| `clearExecutors()` | Remove all executors. |
+| `register(platform)` / `register(registry)` | Build and register; returns the definition. |
+| `build()` | Build the definition without registering. |

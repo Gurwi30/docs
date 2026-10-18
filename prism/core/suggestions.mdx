@@ -1,0 +1,85 @@
+---
+title: Suggestions and Tab Completion
+description: Static, synchronous and asynchronous suggestions, with tooltips.
+---
+
+Every built-in argument ships with sensible default suggestions. Replace them with `replaceSuggestions(...)`.
+
+## Static strings
+
+```java
+new IntegerArgument("number", 0, 10).replaceSuggestions("5", "10");
+```
+
+`replaceSuggestions(String...)` and `replaceSuggestions(Collection<String>)` wrap the strings in a synchronous supplier.
+
+## Synchronous suggestions (with tooltips)
+
+```java
+new StringArgument("kit").replaceSuggestions(
+        BukkitSuggestionsSupplier.sync(ctx -> List.of(
+                BukkitSuggestion.of("starter", "The default starter kit"),
+                BukkitSuggestion.of("vip", "Perks for VIP players")
+        ))
+);
+```
+
+## Asynchronous suggestions
+
+For database or network lookups, return a `CompletableFuture`:
+
+```java
+new StringArgument("player").replaceSuggestions(
+        BukkitSuggestionsSupplier.async(ctx -> CompletableFuture.supplyAsync(() ->
+                List.of(BukkitSuggestion.of("alpha", "first async value"))
+        ))
+);
+```
+
+`replaceSuggestions(CompletableFuture<Collection<String>>)` is a shortcut for a fixed future.
+
+### Where async works
+
+| Situation | Async suppliers |
+| --- | --- |
+| Brigadier registrar (Spigot or Paper) | Supported. A failed future yields no suggestions. |
+| Legacy registrar on Paper | Supported through `AsyncSuggestionsHandler` and Paper's `AsyncTabCompleteEvent` bridge (500 ms timeout). |
+| Legacy registrar on Spigot | Not supported: `UnsupportedOperationException`. |
+| Paper with `disableAsyncSuggestions()` on the legacy path | See [Paper](/prism/platforms/paper#async-tab-completion). |
+
+## Helper factories
+
+| Factory | Result |
+| --- | --- |
+| `BukkitSuggestionsSupplier.sync(Sync)` / `sync(Collection<BukkitSuggestion>)` | Synchronous supplier. |
+| `BukkitSuggestionsSupplier.strings(Collection<String>)` | Synchronous plain strings. |
+| `BukkitSuggestionsSupplier.async(Async)` / `async(CompletableFuture<...>)` | Asynchronous supplier. |
+| `BukkitSuggestionsSupplier.stringsAsync(CompletableFuture<Collection<String>>)` | Asynchronous plain strings. |
+| `BukkitSuggestionsSupplier.empty()` | No suggestions. |
+| `BukkitSuggestion.of(text)` / `of(text, tooltip)` / `of(Collection<String>)` | Suggestion objects. |
+
+## The suggestion context
+
+The `SuggestionContext` passed to a supplier provides:
+
+| Method | Value |
+| --- | --- |
+| `getSource()` | Who is tab-completing. |
+| `getCurrentInput()` | The full input so far. |
+| `getCurrentRawArg()` | The argument currently being typed; use it to filter results. |
+
+## Core contract
+
+In core, suggestions are a `SuggestionsSupplier<Source, Result>`:
+
+```java
+@FunctionalInterface
+public interface AcmeSuggestions<T> extends SuggestionsSupplier<AcmeUser, Collection<T>> {
+}
+```
+
+A platform calls `getSuggestionsSupplier().getSuggestions(new SuggestionContext<>(source, currentInput, currentRawArg))` and translates the result into whatever the host expects.
+
+## Tooltips
+
+Tooltips are shown when Brigadier is active (they become native suggestion tooltips). On the legacy registrar only the suggestion text is used.

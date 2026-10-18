@@ -1,0 +1,109 @@
+---
+title: Paper
+description: Using Prism on Paper and Paper forks, with a Paper-native Brigadier adapter and async suggestions.
+---
+
+| | |
+| --- | --- |
+| **Artifact** | `dev.gurwi:prism-paper:1.0.0-beta.2` |
+| **Platform class** | `PaperPlatform` (identifier `paper`) |
+| **Status** | Supported |
+| **API baseline** | Paper API 1.13.2 (shared Bukkit layer) |
+| **Brigadier** | Paper-native adapter (built against Paper 26.3) tried first, then the `V1_13` … `V26` adapters |
+| **Java** | 17 baseline; the Paper-native adapter is compiled for Java 25 |
+
+## Installation
+
+<Tabs items={['Gradle (Kotlin)', 'Gradle (Groovy)', 'Maven']}>
+  <Tab value="Gradle (Kotlin)">
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("dev.gurwi:prism-paper:1.0.0-beta.2")
+}
+```
+  </Tab>
+  <Tab value="Gradle (Groovy)">
+```groovy
+dependencies {
+    implementation 'dev.gurwi:prism-paper:1.0.0-beta.2'
+}
+```
+  </Tab>
+  <Tab value="Maven">
+```xml
+<dependency>
+    <groupId>dev.gurwi</groupId>
+    <artifactId>prism-paper</artifactId>
+    <version>1.0.0-beta.2</version>
+</dependency>
+```
+  </Tab>
+</Tabs>
+
+## Setup
+
+```java
+public class MyPlugin extends JavaPlugin {
+
+    private PaperPlatform platform;
+
+    @Override
+    public void onEnable() {
+        this.platform = PaperPlatform.configure(this).init();
+    }
+}
+```
+
+## Configuration
+
+| Option | Effect on Paper |
+| --- | --- |
+| `disableBrigadier()` | Use legacy registration only. |
+| `disableAsyncSuggestions()` | Don't register the async tab-completion listener. |
+| `disableLegacyRegistrar()`, `registerPermissions(boolean)`, `withGlobalLegacyCommandErrorHandler(handler)` | Accepted and stored; not yet consumed. See [Platform configuration](/prism/platforms/bukkit#platform-configuration). |
+
+## Paper-specific behavior
+
+### Native Brigadier adapter
+
+When the server exposes `io.papermc.paper.command.brigadier.Commands`, Prism tries the `paper` adapter before the version adapters. If it cannot load (for example on a server whose Java version cannot read it), Prism logs the failure and continues with the `V…` adapters. See [Brigadier](/prism/platforms/brigadier#how-the-adapter-is-chosen).
+
+### Async tab completion
+
+With the default configuration, `PaperPlatform` registers `AsyncTabCompleter`, which listens to Paper's `AsyncTabCompleteEvent`:
+
+1. It only acts on command buffers that start with `/` and have at least one argument, and strips a `plugin:` namespace from the label.
+2. It finds the registered Prism command and fires `AsyncCommandSuggestEvent`.
+3. Listeners can cancel it (no completions) or provide a future of suggestions.
+4. A provided future is awaited for up to **500 ms**. On timeout or failure Prism leaves the original completions untouched; otherwise the result replaces them.
+
+```java
+@EventHandler
+public void onSuggest(AsyncCommandSuggestEvent event) {
+    if (event.getDefinition().getName().equals("lookup")) {
+        event.provideSuggestions(CompletableFuture.supplyAsync(() -> List.of("alpha", "beta")));
+    }
+}
+```
+
+The listener does nothing when no one listens to `AsyncCommandSuggestEvent`.
+
+### Legacy path
+
+If Brigadier is not in use, `PaperCommandsRegistry` additionally registers `AsyncSuggestionsHandler`, so async suggestions also work for legacy-registered commands.
+
+## Forks
+
+Forks of Paper use the same platform class. Report problems on the [issue tracker](https://github.com/AthlasStudios/prism/issues).
+
+## Try it
+
+The repository's test plugin starts a Paper **26.3** server with Java 25:
+
+```bash
+./gradlew :test:plugin:runServer
+```

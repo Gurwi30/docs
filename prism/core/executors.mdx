@@ -1,0 +1,59 @@
+---
+title: Executors and Senders
+description: Run different code depending on who executes the command.
+---
+
+An executor is a functional interface over your source type and your definition type:
+
+```java
+@FunctionalInterface
+public interface CommandExecutor<Source, Definition extends AbstractCommandDefinition<...>> {
+    void run(Source source, CommandArguments<Definition, ? super Source> args);
+
+    static CommandExecutor<Source, Definition> empty();   // does nothing
+}
+```
+
+Pick the executor that matches who may run the command. Prism only invokes the executor that fits the sender, so you don't need `instanceof` checks.
+
+## Bukkit executors
+
+| Method | Sender type |
+| --- | --- |
+| `executes(...)` | Any `CommandSender` |
+| `executesPlayer(...)` | `Player` |
+| `executesConsole(...)` | `ConsoleCommandSender` |
+| `executesRemoteConsole(...)` | `RemoteConsoleCommandSender` |
+| `executesProxy(...)` | `ProxiedCommandSender` |
+| `executesBlock(...)` | `BlockCommandSender` |
+
+Several executors can be registered on the same command, one per sender type:
+
+```java
+new PrismBukkitCommand("whoami")
+        .executesPlayer((player, args) -> player.sendMessage("You are " + player.getName()))
+        .executesConsole((console, args) -> console.sendMessage("You are the console"))
+        .register(platform);
+```
+
+Argument-tree branches have the same `executes…` methods, so a branch can answer differently per sender type.
+
+Use `clearExecutors()` to remove all executors from a builder.
+
+## Executors affect access
+
+On Bukkit platforms a command is only considered executable for a sender if **some executor accepts that sender type**. `BukkitCommandDefinition.canExecute(sender)` is `hasExecutor(sender)` AND the core check (requirement plus all permissions). This is why a console is not offered tab completion for a player-only command.
+
+## How resolution works
+
+Executors are stored in a map keyed by executor interface type. At dispatch the platform looks up `definition.getExecutor(type)` for the sender's type and calls `run(source, args)`. If none matches, the platform decides what to tell the sender, and `NoExecutorException` ("No Executor available for type …") signals the case in core.
+
+## Defining executors for a new platform
+
+Declare one interface per sender kind and register them under their own class, as `BukkitExecutorContainerBuilder` does:
+
+```java
+@FunctionalInterface
+public interface AcmeExecutor extends CommandExecutor<AcmeUser, AcmeCommandDefinition> {
+}
+```

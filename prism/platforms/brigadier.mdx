@@ -1,0 +1,97 @@
+---
+title: Brigadier
+description: How Prism integrates with Minecraft's Brigadier command system, which versions have adapters and how fallback works.
+---
+
+Brigadier is Minecraft's native command library. Prism's Brigadier layer turns your command tree into Brigadier nodes so players get client-side validation, colored syntax and native suggestions.
+
+## Modules
+
+| Module | Artifact | Role |
+| --- | --- | --- |
+| `platform/brigadier` | `prism-brigadier` | Platform-independent tree builder (`BrigadierTreeBuilder`, `BrigadierAdapter`, `BrigadierCompatibleArgument`). Depends on Mojang's `brigadier:1.0.18`. |
+| `platform/brigadier/minecraft` | `prism-brigadier-minecraft` | Minecraft-facing bridge: registrar, compatibility checker, argument mapping and the provider loader. |
+| `minecraft/V1_13 … V26` | bundled | One adapter per Minecraft line. |
+| `minecraft/brigadier-paper` | bundled in the Paper build | Paper-native adapter. |
+
+Each adapter supplies two providers: a **command dispatcher provider** (how to reach the server's dispatcher) and an **argument provider** (how to create Minecraft-native argument types).
+
+## Version support
+
+| Adapter | Compiled against | Minecraft line |
+| --- | --- | --- |
+| `V1_13` | 1.13.2 | 1.13.x |
+| `V1_14` | 1.14.4 | 1.14.x |
+| `V1_15` | 1.15.2 | 1.15.x |
+| `V1_16` | 1.16.5 | 1.16.x |
+| `V1_17` | 1.17.1 | 1.17.x |
+| `V1_18` | 1.18.2 | 1.18.x |
+| `V1_19` | 1.19.4 | 1.19.x |
+| `V1_20` | 1.20.6 | 1.20.x |
+| `V1_21` | 1.21.11 | 1.21.x |
+| `V26` | 26.3 | 26.x |
+| `paper` | Paper 26.3 dev bundle | Paper servers with Paper's Brigadier API |
+
+<Callout type="warn">
+  Adapters touch server internals, so they are compiled against **one patch release** of each line (the table above). Other patch releases of the same line use the same adapter. The repository's automated tests run on a mocked 1.21 server; it contains no per-patch results for the other lines. If an adapter fails to load on your exact version, Prism falls back to legacy registration (see below).
+</Callout>
+
+## How the adapter is chosen
+
+When Prism initializes it asks `MinecraftProviderLoader` for a provider. Brigadier must first be present on the server (`CommandDispatcher`, `LiteralCommandNode` and `Suggestions` classes are checked by `BrigadierCompatibilityChecker`). Then candidates are tried **in this order**, and the first one that loads wins:
+
+1. **`paper`**: only if the server exposes `io.papermc.paper.command.brigadier.Commands`. If it fails to load, Prism keeps trying the next candidates.
+2. `V<major>_<minor>_<patch>` for the running version, if the version has a patch number.
+3. `V<major>_<minor>` for the running version.
+4. Each **older** line, descending, down to `V1_13`. Using one of these logs a warning that the closest older implementation is in use and that it may not work correctly.
+
+If an exact-version or platform candidate throws while loading, Prism logs the error and tries the next one. If an **older** candidate throws, Prism stops, because older implementations would be less compatible.
+
+If nothing loads you get a warning listing the candidates it tried, and the platform registers commands through the legacy registrar instead.
+
+## Registration with Brigadier
+
+`BrigadierCommandRegistrar` registers one Brigadier literal for every label of a definition (its name plus aliases), together with the description, and keeps them so `unregister` can remove them again.
+
+```java
+PaperPlatform platform = PaperPlatform.configure(this).init();
+// Log: [prism] Command registration initialized using BRIGADIER.
+```
+
+## Argument mapping
+
+Prism's Bukkit arguments map to Minecraft-native Brigadier types where one exists. Arguments that implement `BrigadierCompatibleArgument` provide their own Brigadier type through `brigadierType()` and read the value back with `fromBrigadier(...)`. The minecraft bridge exposes native types for:
+
+- Entity and player selectors (single and multiple) and player profiles
+- Block positions, column block positions, fine (double) positions and column fine positions
+- Block-in-world predicates and item stack predicates
+- Rotation and angle
+
+and resolvers that evaluate them against the command source (for example `EntitySelectorArgumentResolver`, `BlockPositionResolver`, `FinePositionResolver`).
+
+If a native type is unavailable on the running version, the bridge throws `UnsupportedArgumentTypeException` ("Argument type '…' is not supported on this server version").
+
+## Suggestions with Brigadier
+
+Sync and async suggestions both work. Async suggestions return a `CompletableFuture`, which Brigadier waits for; a failed future simply yields no suggestions. A suggestion's tooltip is passed to Brigadier as the native suggestion tooltip. See [Suggestions](/prism/core/suggestions).
+
+## Disabling or falling back
+
+```java
+PaperPlatform.configure(this)
+        .disableBrigadier()
+        .init();
+```
+
+With Brigadier off (or unsupported) you get legacy tab completion and Prism's own argument parsing and error messages. See [Bukkit Layer](/prism/platforms/bukkit#legacy-registration) for how the legacy path behaves.
+
+## Troubleshooting
+
+| Log message (shortened) | Meaning |
+| --- | --- |
+| `Brigadier is not available on this server` | The Brigadier classes are missing, so the provider cannot load. Legacy registration is used. |
+| `No … implementation exists for Minecraft X, using the closest older one` | No adapter for your line; an older one was loaded and may misbehave. |
+| `No suitable … implementation was found … (tried [...])` | Nothing loaded. Legacy registration is used. |
+| `Failed to initialize Brigadier. The Minecraft version may be unsupported. Falling back to legacy registration.` | The dispatcher provider could not be created. |
+
+If the problem persists on a version listed above, report it on the [issue tracker](https://github.com/AthlasStudios/prism/issues).

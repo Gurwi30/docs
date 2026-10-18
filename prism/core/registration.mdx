@@ -1,0 +1,50 @@
+---
+title: Registering and Unregistering
+description: Register commands at runtime and inspect what is registered.
+---
+
+A command can be registered in two equivalent ways:
+
+```java
+// 1. Directly from the builder
+BukkitCommandDefinition definition = new PrismBukkitCommand("hello")
+        .executes((sender, args) -> sender.sendMessage("Hello!"))
+        .register(platform);
+
+// 2. Build first, register later
+BukkitCommandDefinition built = new PrismBukkitCommand("hello")
+        .executes((sender, args) -> sender.sendMessage("Hello!"))
+        .build();
+
+platform.getCommandsRegistry().register(built);
+platform.getCommandsRegistry().unregister(built);
+```
+
+`register(...)` returns the built definition, so you can keep it for `unregister` later.
+
+## The registry
+
+| Method | Description |
+| --- | --- |
+| `register(definition)` | Stores the definition and announces it to the host. On Spigot and Paper, registering a definition that is already registered throws `IllegalStateException`. |
+| `unregister(definition)` | Removes it from the host. |
+| `getRegisteredCommands()` | Unmodifiable view of everything registered on the platform. |
+| `getPlatform()` | The owning platform. |
+
+A `Platform` exposes `getIdentifier()` and `getCommandsRegistry()`; Bukkit platforms also expose `getPlugin()`.
+
+## Because commands are values
+
+Since a builder is plain Java, you can create commands in loops, share argument instances between commands and unregister or re-register at runtime:
+
+```java
+for (String warp : warps) {
+    new PrismBukkitCommand(warp)
+            .executesPlayer((player, args) -> player.teleport(lookup(warp)))
+            .register(platform);
+}
+```
+
+## Help generator
+
+Render clickable usage for a tree with `CommandHelp`. See [Built-in help](/prism/platforms/bukkit#built-in-help).

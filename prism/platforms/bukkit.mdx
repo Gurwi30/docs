@@ -1,0 +1,193 @@
+---
+title: Bukkit Layer
+description: The shared Bukkit API used by both Spigot and Paper: commands, arguments, executors, errors and the legacy registrar.
+---
+
+`platform/bukkit` (artifact `prism-bukkit`) is the full-featured reference platform and is shared by [Spigot](/prism/platforms/spigot) and [Paper](/prism/platforms/paper). The source type is Bukkit's `CommandSender`.
+
+## Key types
+
+| Type | Purpose |
+| --- | --- |
+| `PrismBukkitCommand` | The fluent command builder (extends `BukkitCommandBuilder`). |
+| `BukkitCommandDefinition` | The built command. Adds `hasExecutor(sender)`, `getUsageString()` and `buildUsageString(sender)`. |
+| `BukkitArgument` | Base class for Bukkit arguments. It is also a tree argument, so every argument supports `then(...)` and executors. |
+| `BukkitPermission`, `CommandPermission` | Permission nodes. |
+| `BukkitUsageRequirement` | Ready-made requirements (`permissions(...)`, `isOp()`). |
+| `BukkitSuggestionsSupplier`, `BukkitSuggestion` | Sync/async suggestions with tooltips. |
+| `BukkitCommandsRegistry` | The registry interface implemented by Spigot and Paper. |
+| `LegacyCommandRegistrar` | Registers commands in the server's `CommandMap`. |
+| `CommandHelp` | Clickable help renderer. |
+| `AsyncCommandSuggestEvent` | Event used by the async tab-completion bridge. |
+
+## Builder additions
+
+On top of the [core builder](/prism/core/overview#common-builder-methods), `PrismBukkitCommand` adds:
+
+| Method | Purpose |
+| --- | --- |
+| `withPermission(String...)` | Permission strings (converted to `BukkitPermission`). |
+| `executes`, `executesPlayer`, `executesConsole`, `executesRemoteConsole`, `executesProxy`, `executesBlock` | [Sender-specific executors](/prism/core/executors). |
+| `withRequirement(Class, req)`, `withPlayerRequirement`, `withConsoleRequirement`, `withRemoteConsoleRequirement`, `withProxyRequirement`, `withBlockRequirement` | [Typed requirements](/prism/core/requirements-and-permissions#requirements). |
+| `replaceErrorHandler(handler)` | Per-command handler for [legacy parse errors](#error-handling). |
+
+## Platform configuration
+
+`PaperPlatform.configure(plugin)` and `SpigotPlatform.configure(plugin)` return builders. Finish with `.init()`.
+
+| Option | Platform | Effect |
+| --- | --- | --- |
+| `disableBrigadier()` | Paper, Spigot | Skip Brigadier and register through the legacy command system only. |
+| `disableAsyncSuggestions()` | Paper | Don't register the async tab-completion listener. |
+| `disableLegacyRegistrar()` | Paper, Spigot | Stored in the configuration. |
+| `registerPermissions(boolean)` | Paper, Spigot | Stored in the configuration (default `true`). |
+| `withGlobalLegacyCommandErrorHandler(handler)` | Paper, Spigot | Stored in the configuration. |
+
+<Callout type="warn">
+  In the current source (`1.0.0-beta.2`), only `disableBrigadier()` and `disableAsyncSuggestions()` change behavior at registration time. `disableLegacyRegistrar()`, `registerPermissions(...)` and `withGlobalLegacyCommandErrorHandler(...)` are accepted and exposed on the configuration object (`isLegacyRegistrarDisabled()`, `isPermissionRegistrationEnabled()`, `getGlobalLegacyCommandErrorHandler()`), but nothing reads them yet. Use `replaceErrorHandler(...)` on the command to customize errors today.
+</Callout>
+
+```java
+PaperPlatform platform = PaperPlatform.configure(this)
+        .disableAsyncSuggestions()
+        .init();
+```
+
+## Legacy registration
+
+The legacy registrar is used when Brigadier is disabled or cannot be initialized.
+
+- Each definition becomes a `BukkitExecutableCommand` registered in the server `CommandMap` under your plugin's name as the fallback prefix.
+- Name, description and aliases are also added to your plugin description's command metadata.
+- `unregister` removes the command from the map and from the known commands.
+- Argument parsing is done by Prism (`LegacyArgumentsParser`), including flags, greedy and multi-token arguments.
+
+Registering the same definition twice throws `IllegalStateException` ("Command … is already registered!") on both platforms.
+
+### Error handling
+
+When parsing fails on the legacy path, the command's error handler is called with a `BukkitArgumentsParseException`. Its `getType()` is one of:
+
+| Type | Meaning |
+| --- | --- |
+| `INVALID_ARGUMENT` | A value could not be parsed. |
+| `MISSING_ARGUMENT` | A required argument is missing. |
+| `UNKNOWN_ARGUMENT` | Extra input was supplied. |
+
+The exception also carries the raw input and the start/end offsets of the offending part.
+
+```java
+public interface LegacyCommandExecutionErrorHandler {
+    void onArgumentsParseError(BukkitCommandDefinition command, CommandSender sender, BukkitArgumentsParseException exception);
+
+    static LegacyCommandExecutionErrorHandler defaultHandler();  // colored usage and caret
+    static LegacyCommandExecutionErrorHandler consoleHandler();  // plain-text usage and caret
+}
+```
+
+The default handler highlights the faulty part of the typed command and underlines it with carets, and delegates to the console handler when the sender is the console.
+
+```java
+new PrismBukkitCommand("kit")
+        .replaceErrorHandler(LegacyCommandExecutionErrorHandler.consoleHandler())
+        // ...
+```
+
+## Built-in argument types
+
+All of these live in `dev.gurwi.prism.bukkit.argument`. Numeric arguments accept optional bounds, for example `new IntegerArgument("amount", 1, 64)` or `new IntegerArgument("amount", 1)` for a minimum only.
+
+| Category | Arguments |
+| --- | --- |
+| **Primitives** | `StringArgument`, `GreedyStringArgument`, `MultiStringArgument(name, consumption)`, `CharacterArgument`, `BooleanArgument`, `ByteArgument`, `ShortArgument`, `IntegerArgument`, `LongArgument`, `FloatArgument`, `DoubleArgument`, `UUIDArgument` |
+| **Ranges** | `ByteRangeArgument`, `ShortRangeArgument`, `IntegerRangeArgument`, `LongRangeArgument`, `FloatRangeArgument`, `DoubleRangeArgument`, `NumberRangeArgument(name, parser)` |
+| **Players and entities** | `PlayerArgument`, `OfflinePlayerArgument`, `EntityTypeArgument`, `EntitySelectorArgument` (for example `ManyEntities`) |
+| **World and position** | `WorldArgument`, `LocationArgument(name[, centerIntegers])`, `ColumnLocationArgument(name[, centerIntegers])`, `BlockPositionArgument`, `ColumnBlockPositionArgument`, `VectorArgument`, `RotationArgument`, `AngleArgument`, `AxesArgument` |
+| **Blocks and items** | `MaterialArgument`, `BlockStateArgument`, `BlockPredicateArgument`, `ItemStackPredicateArgument`, `EnchantmentArgument` |
+| **Game enums and registries** | `GameModeArgument`, `DifficultyArgument`, `WeatherArgument`, `BiomeArgument`, `PotionEffectTypeArgument`, `ParticleArgument`, `SoundArgument`, `DisplaySlotArgument`, `NamespacedKeyArgument`, `MirrorArgument`, `StructureRotationArgument`, `EnumArgument(name, Class)` |
+| **Text and color** | `ColorArgument`, `HexColorArgument`, `MessageArgument`, `TimeArgument(name[, min])` |
+| **Structure** | `LiteralArgument`, `FlagArgument` |
+
+### Argument base classes
+
+| Base | Use |
+| --- | --- |
+| `BukkitArgument` | Root class; adds `withFixedValues(...)`, `withPermissions(...)` and string-based `replaceSuggestions(...)` overloads. Its default suggestions are empty. |
+| `BoundedArgument` | Arguments with `getMin()` / `getMax()`. |
+| `GreedyArgument` | Consumes the rest of the input. |
+| `MultiTokenArgument` | Consumes a fixed number of tokens (`getConsumption()`). |
+| `PositionArgument`, `EntitySelectorArgument` | Position and selector parsing. |
+
+Per-argument helpers on every `BukkitArgument`:
+
+```java
+new StringArgument("kit")
+        .replaceSuggestions("starter", "vip")       // static suggestions
+        .withPermissions("myplugin.kit");            // permission just for this argument
+
+new StringArgument("color")
+        .withFixedValues("red", "green", "blue");    // literal values (no whitespace, unique)
+```
+
+`withFixedValues(...)` declares a fixed set of literal values (empty or whitespace-containing values are rejected). In `1.0.0-beta.2` these values are used to suggest the value of a [flag](#flags) that wraps the argument.
+
+<Callout>
+  Greedy arguments must be the last argument of a command and cannot have children. The legacy parser throws `GreedyArgumentException` for a greedy argument that is not last or that has children.
+</Callout>
+
+## Flags
+
+`FlagArgument` is a greedy argument that parses flags in any order. A flag is either a presence switch or carries a value of any other Bukkit argument type.
+
+```java
+new PrismBukkitCommand("flagger")
+        .withArguments(
+                new FlagArgument("flags").flags(
+                        Flag.valued(new ColorArgument("color"), 'c'),
+                        Flag.presence("enable", 'e')
+                )
+        )
+        .executesPlayer((player, args) -> {
+            ParsedFlags flags = args.get("flags");
+            Optional<ChatColor> color = flags.get("color");
+
+            color.ifPresent(c -> player.sendMessage("Color: " + c.name()));
+        })
+        .register(platform);
+```
+
+| `Flag` factory | Meaning |
+| --- | --- |
+| `Flag.presence(name)` / `Flag.presence(name, shortName)` | On/off switch. |
+| `Flag.valued(argument)` / `Flag.valued(argument, shortName)` | Takes a value; the flag name is the argument's name. |
+| `flag.repeatable()` | Allows the flag more than once. |
+
+Long form is `--name`, short form is `-x`. Names must not be blank, contain whitespace or `=`, and flag names and short names must be unique within a `FlagArgument` (otherwise `IllegalArgumentException`).
+
+`ParsedFlags` accessors, each available with a `Flag` or a flag-name string:
+
+| Method | Returns |
+| --- | --- |
+| `has(flag)` | Whether the flag was given. |
+| `isSet(flag)` | Boolean state of a presence flag. |
+| `get(flag)` | `Optional<T>`. |
+| `get(flag, default)` | Value or default. |
+| `getAll(flag)` | All values of a repeatable flag. |
+| `count(flag)` | How many times it appeared. |
+
+## Built-in help
+
+`CommandHelp` renders a clickable usage list for the current command, including subcommands and argument-tree branches. It only shows entries the sender may run.
+
+```java
+new PrismBukkitCommand("myplugin")
+        .withSubCommands(/* ... */)
+        .executesPlayer((player, args) -> CommandHelp.help(player, args))
+        .register(platform);
+```
+
+`CommandHelp.help(sender, args, primary, secondary)` restyles it with two `ChatColor` values. The defaults are `#00E5FF` and `#01737D`, with `AQUA` and `DARK_AQUA` as fallbacks on versions without hex colors.
+
+## Usage strings
+
+`BukkitCommandDefinition.getUsageString()` builds `name <required> [<optional>]` for the whole parent chain. `buildUsageString(sender)` only includes entries the sender can use.
