@@ -45,7 +45,7 @@ On top of the [core builder](/prism/core/overview#common-builder-methods), `Pris
 | `withGlobalLegacyCommandErrorHandler(handler)` | Paper, Spigot | Stored in the configuration. |
 
 <Callout type="warn">
-  In the current source (`1.0.0-beta.2`), only `disableBrigadier()` and `disableAsyncSuggestions()` change behavior at registration time. `disableLegacyRegistrar()`, `registerPermissions(...)` and `withGlobalLegacyCommandErrorHandler(...)` are accepted and exposed on the configuration object (`isLegacyRegistrarDisabled()`, `isPermissionRegistrationEnabled()`, `getGlobalLegacyCommandErrorHandler()`), but nothing reads them yet. Use `replaceErrorHandler(...)` on the command to customize errors today.
+  In the current source (`1.0.0-beta.3`), only `disableBrigadier()` and `disableAsyncSuggestions()` change behavior at registration time. `disableLegacyRegistrar()`, `registerPermissions(...)` and `withGlobalLegacyCommandErrorHandler(...)` are accepted and exposed on the configuration object (`isLegacyRegistrarDisabled()`, `isPermissionRegistrationEnabled()`, `getGlobalLegacyCommandErrorHandler()`), but nothing reads them yet. Use `replaceErrorHandler(...)` on the command to customize errors today.
 </Callout>
 
 ```java
@@ -130,7 +130,7 @@ new StringArgument("color")
         .withFixedValues("red", "green", "blue");    // literal values (no whitespace, unique)
 ```
 
-`withFixedValues(...)` declares a fixed set of literal values (empty or whitespace-containing values are rejected). In `1.0.0-beta.2` these values are used to suggest the value of a [flag](#flags) that wraps the argument.
+`withFixedValues(...)` declares a fixed set of literal values (empty or whitespace-containing values are rejected). In `1.0.0-beta.3` these values are used to suggest the value of a [flag](#flags) that wraps the argument.
 
 <Callout>
   Greedy arguments must be the last argument of a command and cannot have children. The legacy parser throws `GreedyArgumentException` for a greedy argument that is not last or that has children.
