@@ -3,8 +3,6 @@ title: Getting Started
 description: Install Prism, create a platform and register your first command.
 ---
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
-
 ## Requirements
 
 - **Java 11** or newer for building (the library targets Java 11)
@@ -26,6 +24,7 @@ The Paper and Spigot artifacts are self-contained bundles that already include t
 
 <Tabs items={['Gradle (Kotlin)', 'Gradle (Groovy)', 'Maven']}>
   <Tab value="Gradle (Kotlin)">
+
 ```kotlin
 repositories {
     mavenCentral()
@@ -35,8 +34,10 @@ dependencies {
     implementation("dev.gurwi:prism-paper:1.0.0-beta.5")
 }
 ```
+
   </Tab>
   <Tab value="Gradle (Groovy)">
+
 ```groovy
 repositories {
     mavenCentral()
@@ -46,8 +47,10 @@ dependencies {
     implementation 'dev.gurwi:prism-paper:1.0.0-beta.5'
 }
 ```
+
   </Tab>
   <Tab value="Maven">
+
 ```xml
 <dependency>
     <groupId>dev.gurwi</groupId>
@@ -55,6 +58,7 @@ dependencies {
     <version>1.0.0-beta.5</version>
 </dependency>
 ```
+
   </Tab>
 </Tabs>
 
@@ -70,6 +74,7 @@ Do this once, in `onEnable` (on Velocity, in the plugin constructor).
 
 <Tabs items={['Paper', 'Spigot', 'Velocity', 'BungeeCord']}>
   <Tab value="Paper">
+
 ```java
 public class MyPlugin extends JavaPlugin {
 
@@ -81,8 +86,10 @@ public class MyPlugin extends JavaPlugin {
     }
 }
 ```
+
   </Tab>
   <Tab value="Spigot">
+
 ```java
 public class MyPlugin extends JavaPlugin {
 
@@ -94,8 +101,10 @@ public class MyPlugin extends JavaPlugin {
     }
 }
 ```
+
   </Tab>
   <Tab value="Velocity">
+
 ```java
 @Plugin(id = "my-plugin")
 public class MyPlugin {
@@ -108,8 +117,10 @@ public class MyPlugin {
     }
 }
 ```
+
   </Tab>
   <Tab value="BungeeCord">
+
 ```java
 public class MyPlugin extends Plugin {
 
@@ -121,6 +132,7 @@ public class MyPlugin extends Plugin {
     }
 }
 ```
+
   </Tab>
 </Tabs>
 
