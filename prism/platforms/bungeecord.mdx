@@ -4,7 +4,7 @@ description: Register Prism commands on BungeeCord and its forks.
 ---
 
 <Callout type="warn">
-  The BungeeCord platform is **experimental**. It targets **Java 17** and the **BungeeCord API 1.21**. The example plugin runs on Waterfall 1.21.
+  The BungeeCord platform is **experimental**. It targets **Java 11** and the **BungeeCord API 1.21**. The example plugin runs on Waterfall 1.21.
 </Callout>
 
 The BungeeCord platform (`prism-bungeecord`) reuses the core builder and the Brigadier tree builder, so commands, subcommands, argument trees, optional arguments and suggestions work as described in the [core docs](/prism/core/overview). The command class is `BungeecordCommand`, and the sender is BungeeCord's `CommandSender`.
@@ -13,7 +13,7 @@ The BungeeCord platform (`prism-bungeecord`) reuses the core builder and the Bri
 
 ```kotlin
 dependencies {
-    implementation("dev.gurwi:prism-bungeecord:1.0.0-beta.5")
+    implementation("dev.gurwi:prism-bungeecord:1.0.0-beta.6")
     implementation("com.mojang:brigadier:1.0.18")
 }
 ```
