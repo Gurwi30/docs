@@ -1,13 +1,13 @@
 ---
 title: Custom Platform
-description: Implement Prism for any host in six steps.
+description: Implement Prism for any host in six steps, plus an optional Brigadier step.
 ---
 
-`core` knows nothing about Minecraft, Discord or any other host. A platform supplies six things on top of it, and everything else comes for free. `platform/bukkit` is the full-featured reference; `platform/jda` is a minimal skeleton (see [JDA](/prism/platforms/jda)).
+`core` knows nothing about Minecraft, Discord or any other host. A platform supplies six things on top of it, and everything else comes for free. `platform/bukkit` is the full-featured reference, `platform/velocity` and `platform/bungeecord` are compact Brigadier-only references, and `platform/jda` is a minimal skeleton (see [JDA](/prism/platforms/jda)).
 
 ```kotlin
 dependencies {
-    api("dev.gurwi:prism-core:1.0.0-beta.3")
+    api("dev.gurwi:prism-core:1.0.0-beta.5")
 }
 ```
 
@@ -56,9 +56,27 @@ public abstract class AcmeArgument<Impl extends AcmeArgument<Impl, T>, T>
         super(name, defaultSuggestions);
     }
 }
+
+public class AcmeIntegerArgument extends AcmeArgument<AcmeIntegerArgument, Integer> {
+
+    public AcmeIntegerArgument(String name) {
+        super(name, ctx -> List.of());
+    }
+
+    @Override
+    public Integer parse(AcmeUser source, String value) throws ArgumentParseException {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new ArgumentParseException(this, value, "'" + value + "' is not a number");
+        }
+    }
+}
 ```
 
 For `then(...)` trees, extend `AbstractTreeArgument`, `AbstractTreeCommandBuilder` and `AbstractTreeCommandDefinition` instead.
+
+Arguments also expose `canUse(source)`, which a platform must honour, and `isListed()`, which decides whether a parsed value is stored in `CommandArguments`.
 
 ## 4. Command definition
 
@@ -79,7 +97,7 @@ public class AcmeCommandDefinition extends AbstractCommandDefinition<
 }
 ```
 
-The base class provides `getName()`, `getAliases()`, `getChildren()`, `getChild(name)`, `getParent()`, `getExecutor(type)` and `canExecute(source)`.
+The base class provides `getName()`, `getAliases()`, `getChildren()`, `getChild(name)`, `getParent()`, `getExecutor(type)`, `getExecutors()` and `canExecute(source)` (requirement plus all permissions).
 
 ## 5. Builder
 
@@ -103,7 +121,7 @@ public class AcmeCommandBuilder extends AbstractCommandBuilder<
 }
 ```
 
-`withDescription`, `withArguments`, `withOptionalArguments`, `withPermission`, `withRequirement`, `withSubCommands` and `register(...)` are inherited.
+`withDescription`, `withArguments`, `withOptionalArguments`, `withPermission`, `withRequirement`, `withSubCommands` and `register(...)` are inherited. `register(...)` passes the built definition to your registry, so the definition must never be `null`.
 
 ## 6. Platform and registry
 
@@ -156,9 +174,11 @@ public class AcmeCommandsRegistry implements CommandsRegistry<AcmePlatform, Acme
 }
 ```
 
+A registry should not register host event listeners on its own. Leave that to the user of your platform, as the Velocity registry does.
+
 ## 7. Dispatching input
 
-Prism does not parse or run anything by itself. When your host receives input for a registered command, your registry (or a helper it owns):
+If your host has no command system of its own, Prism does not parse or run anything by itself. When your host receives input for a registered command, your registry (or a helper it owns):
 
 1. Walks the definition tree, matching subcommand names with `getChild(...)`.
 2. Checks `definition.canExecute(source)` and reports "no permission" if it fails.
@@ -179,6 +199,40 @@ definition.getExecutor(AcmeExecutor.class)
 
 For suggestions, call each argument's `getSuggestionsSupplier().getSuggestions(new SuggestionContext<>(source, currentInput, currentRawArg))`.
 
+## 8. Brigadier hosts (optional)
+
+If your host already speaks Brigadier (Minecraft servers, Velocity), or you can run a `CommandDispatcher` behind it (BungeeCord), skip step 7. Implement `BrigadierAdapter<Source, Definition>` (from `prism-brigadier-api`) and let `BrigadierTreeBuilder` build the command tree, parse the hierarchy and wire up suggestions.
+
+| Method                                        | Purpose                                                                      |
+|-----------------------------------------------|------------------------------------------------------------------------------|
+| `visible(definition, source)`                 | Whether the source may see the command at all.                               |
+| `available(argument, source)`                 | Whether the source may use an argument node.                                 |
+| `forcedValues(argument)`                      | Fixed values an argument expands to. Defaults to none.                       |
+| `accepts(argument, source, word)`             | Whether a single word parses for the argument.                               |
+| `nativeType(argument)`                        | The Brigadier `ArgumentType` backing the argument, or `null` for literals.   |
+| `tokens(argument)`                            | How many input words the argument consumes.                                  |
+| `greedy(argument)` / `literal(argument)`      | Node kind.                                                                   |
+| `branches(definition)` / `children(argument)` | The `then(...)` tree of a command or an argument.                            |
+| `command(...)`                                | The Brigadier `Command` for a definition or a path inside its argument tree. |
+| `suggestions(argument, nativeType)`           | The `SuggestionProvider` for an argument, falling back to `nativeType`.      |
+
+Your registry then turns each definition into Brigadier nodes. On Velocity:
+
+```java
+for (String label : adapter.getBuilder().labels(definition)) {
+    LiteralCommandNode<CommandSource> node = adapter.getBuilder().build(definition, label);
+    BrigadierCommand command = new BrigadierCommand(node);
+
+    CommandMeta meta = manager.metaBuilder(command)
+            .plugin(platform.getPlugin())
+            .build();
+
+    manager.register(meta, command);
+}
+```
+
+Read `BukkitCommandDefinitionAdapter` (`brigadier/brigadier-minecraft`), `VelocityCommandDefinitionAdapter` (`platform/velocity`) and `BungeecordCommandDefinitionAdapter` (`platform/bungeecord`) for three complete adapters. The BungeeCord registry is the one to read if your host has its own command system and you wrap a `CommandDispatcher` in it.
+
 ## Using it
 
 ```java
@@ -193,6 +247,4 @@ new AcmeCommandBuilder("greet")
         .register(platform);
 ```
 
-<Callout>
-  Read `BukkitCommandsRegistry`, `LegacyCommandRegistrar` and `LegacyArgumentsParser` in `platform/bukkit` for a complete implementation of steps 6 and 7, including tab completion, flags and greedy arguments.
-</Callout>
+Read `BukkitCommandsRegistry`, `LegacyCommandRegistrar` and `LegacyArgumentsParser` in `platform/bukkit` for a complete implementation of steps 6 and 7, including tab completion, flags and greedy arguments.

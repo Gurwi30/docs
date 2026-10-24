@@ -18,6 +18,8 @@
     "platforms/bukkit",
     "platforms/spigot",
     "platforms/paper",
+    "platforms/velocity",
+    "platforms/bungeecord",
     "platforms/brigadier",
     "platforms/jda",
     "---Advanced---",

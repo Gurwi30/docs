@@ -1,90 +1,101 @@
 ---
 title: Platforms Overview
-description: Every platform Prism supports today, and the Minecraft versions each one covers.
+description: Every platform Prism supports today, and the versions each one covers.
 ---
 
 A **platform** is a thin layer on top of [core](/prism/core/overview) that connects Prism to a host. Everything else (the fluent builder, argument trees, subcommands, requirements, `CommandArguments`) comes from core.
 
-Core defines the identifiers of the known platforms in the `Prism` interface: `spigot`, `paper` and `jda`.
+Core defines the identifiers of the known platforms in the `Prism` interface: `spigot`, `paper`, `bungeecord`, `velocity` and `jda`.
 
 ## Support matrix
 
-| Platform | Artifact | Status | Minecraft |
-| --- | --- | --- | --- |
-| [Spigot](/prism/platforms/spigot) (and forks) | `prism-spigot` | Supported | 1.13 → 1.21 and 26.x through the [Brigadier adapters](/prism/platforms/brigadier); legacy registration as fallback |
-| [Paper](/prism/platforms/paper) (and forks) | `prism-paper` | Supported | Same adapter range, plus a Paper-native Brigadier adapter built against Paper 26.3 |
-| [Brigadier](/prism/platforms/brigadier) | Bundled in both | Supported | 1.13 → 1.21 and 26.x |
-| [JDA (Discord)](/prism/platforms/jda) | `platform/jda` (not published) | Skeleton | Not applicable |
+| Platform                                                  | Artifact                       | Status       | Version support                                                                                                                  |
+|-----------------------------------------------------------|--------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [Spigot](/prism/platforms/spigot) (and forks)        | `prism-spigot`                 | Supported    | 1.13 → 1.21 and 26.x through the [Brigadier adapters](/prism/platforms/brigadier); legacy registration as fallback         |
+| [Paper](/prism/platforms/paper) (and forks)          | `prism-paper`                  | Supported    | Same adapter range, plus a Paper-native Brigadier adapter built against Paper 26.3                                               |
+| [Brigadier](/prism/platforms/brigadier)              | Bundled in both                | Supported    | 1.13 → 1.21 and 26.x                                                                                                             |
+| [Velocity](/prism/platforms/velocity)                | `prism-velocity`               | Experimental | Velocity 4.x API (Java 25), Brigadier only                                                                                       |
+| [BungeeCord](/prism/platforms/bungeecord) (and forks)| `prism-bungeecord`             | Experimental | BungeeCord API 1.21 (Java 17), Brigadier dispatcher behind a regular BungeeCord command                                          |
+| [JDA (Discord)](/prism/platforms/jda)                | `platform/jda` (not published) | Skeleton     | Not applicable                                                                                                                   |
 
-The API is compiled against the **Spigot 1.13.2** API (Paper builds compile against `paper-api:1.13.2`), so `1.13` is the baseline for the Bukkit layer.
+The Bukkit API is compiled against the **Spigot 1.13.2** API (Paper builds compile against `paper-api:1.13.2`), so `1.13` is the baseline for the Bukkit layer.
 
 ## Brigadier adapters at a glance
 
 Each adapter is compiled against one specific server version and serves its whole minor line:
 
-| Adapter | Compiled against | Served Minecraft line |
-| --- | --- | --- |
-| `V1_13` | Spigot 1.13.2 | 1.13.x |
-| `V1_14` | Spigot 1.14.4 | 1.14.x |
-| `V1_15` | Spigot 1.15.2 | 1.15.x |
-| `V1_16` | Spigot 1.16.5 | 1.16.x |
-| `V1_17` | Spigot 1.17.1 | 1.17.x |
-| `V1_18` | Spigot 1.18.2 | 1.18.x |
-| `V1_19` | Spigot 1.19.4 | 1.19.x |
-| `V1_20` | Spigot 1.20.6 | 1.20.x |
-| `V1_21` | Spigot 1.21.11 | 1.21.x |
-| `V26` | Spigot 26.3 | 26.x |
+| Adapter | Compiled against      | Served Minecraft line                        |
+|---------|-----------------------|----------------------------------------------|
+| `V1_13` | Spigot 1.13.2         | 1.13.x                                       |
+| `V1_14` | Spigot 1.14.4         | 1.14.x                                       |
+| `V1_15` | Spigot 1.15.2         | 1.15.x                                       |
+| `V1_16` | Spigot 1.16.5         | 1.16.x                                       |
+| `V1_17` | Spigot 1.17.1         | 1.17.x                                       |
+| `V1_18` | Spigot 1.18.2         | 1.18.x                                       |
+| `V1_19` | Spigot 1.19.4         | 1.19.x                                       |
+| `V1_20` | Spigot 1.20.6         | 1.20.x                                       |
+| `V1_21` | Spigot 1.21.11        | 1.21.x                                       |
+| `V26`   | Spigot 26.3           | 26.x                                         |
 | `paper` | Paper dev bundle 26.3 | Paper servers exposing Paper's Brigadier API |
 
-Details and fallback rules are on the [Brigadier](/prism/platforms/brigadier) page.
+Details and fallback rules are on the [Brigadier](/prism/platforms/brigadier) page. Velocity and BungeeCord do not use these adapters; they use the platform-independent Brigadier tree builder directly.
 
 ## Java
 
-| Part | Java |
-| --- | --- |
-| Library (core, Bukkit layer, Spigot/Paper platforms) | 17 |
-| `V1_20`, `V1_21` adapters | compiled with 21 |
-| `V26` and `paper` adapters | compiled with 25 |
-| Unit tests | 21 |
-| CI and the Paper test plugin | 25 |
+| Part                                                         | Java             |
+|--------------------------------------------------------------|------------------|
+| Library (core, Bukkit layer, Spigot/Paper platforms)         | 11               |
+| BungeeCord platform                                          | 17               |
+| `V1_13` – `V1_17` adapters                                   | compiled with 16 |
+| `V1_18`, `V1_19` adapters                                    | compiled with 17 |
+| `V1_20`, `V1_21` adapters                                    | compiled with 21 |
+| `V26` and `paper` adapters, Velocity platform                | compiled with 25 |
+| Unit tests                                                   | 21               |
+| CI and the Paper and Velocity example plugins                | 25               |
 
 The adapters follow the Java level their Minecraft versions require, so your server's own Java version already matches the adapter it needs.
 
 ## Layering
 
-```text
-core                      Platform-agnostic command model
-└── platform/bukkit       Shared Bukkit API layer
-    ├── platform/spigot   Spigot platform and registry
-    └── platform/paper    Paper platform and registry
-platform/brigadier        Platform-independent Brigadier tree builder
-└── minecraft/            Minecraft-facing bridge
-    ├── V1_13 … V1_21, V26
-    └── brigadier-paper
-platform/jda              Discord platform skeleton
+```
+core                          Platform-agnostic command model
+├── platform/bukkit           Shared Bukkit API layer
+│   ├── platform/spigot       Spigot platform and registry
+│   └── platform/paper        Paper platform and registry
+├── platform/velocity         Velocity platform and registry
+├── platform/bungeecord       BungeeCord platform and registry
+└── platform/jda              Discord platform skeleton
+brigadier/brigadier-api       Platform-independent Brigadier tree builder
+├── brigadier/brigadier-minecraft   Minecraft-facing bridge
+│   ├── brigadier/nms/V1_13 … V1_21, V26
+│   └── brigadier/brigadier-paper
+├── platform/velocity         (uses it directly)
+└── platform/bungeecord       (uses it directly)
 ```
 
 ## Choosing an artifact
 
-| Your server software | Use |
-| --- | --- |
-| Paper or a Paper fork | `prism-paper` |
-| Spigot or a Spigot fork | `prism-spigot` |
+| Your software           | Use                |
+|-------------------------|--------------------|
+| Paper or a Paper fork   | `prism-paper`      |
+| Spigot or a Spigot fork | `prism-spigot`     |
+| Velocity                | `prism-velocity`   |
+| BungeeCord or a fork    | `prism-bungeecord` |
 
-The individual modules `prism-core`, `prism-bukkit`, `prism-brigadier` and `prism-brigadier-minecraft` are also published; most projects should use a bundle.
+The individual modules `prism-core`, `prism-bukkit`, `prism-brigadier-api` and `prism-brigadier-minecraft` are also published; most Minecraft server projects should use a bundle.
 
 ## Registrars
 
-Both Minecraft platforms pick a registrar once, when the platform is created, and log which one is active:
+The two Bukkit platforms pick a registrar once, when the platform is created, and log which one is active:
 
-```text
+```
 [prism] Command registration initialized using BRIGADIER.
 [prism] Command registration initialized using LEGACY.
 ```
 
-| Registrar | How commands reach the server |
-| --- | --- |
+| Registrar   | How commands reach the server                                                                    |
+|-------------|--------------------------------------------------------------------------------------------------|
 | `BRIGADIER` | Converts the definition tree into Brigadier nodes and registers them in the server's dispatcher. |
-| `LEGACY` | Registers a Bukkit `Command` in the server's `CommandMap` and parses input itself. |
+| `LEGACY`    | Registers a Bukkit `Command` in the server's `CommandMap` and parses input itself.               |
 
-If Brigadier is disabled or unavailable, `LEGACY` is used, so commands keep working.
+If Brigadier is disabled or unavailable, `LEGACY` is used, so commands keep working. Velocity and BungeeCord have no legacy registrar: commands are always built as Brigadier trees.

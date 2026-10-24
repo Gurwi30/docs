@@ -5,9 +5,7 @@ description: A code-first command framework for Java with a fluent, type-safe AP
 
 Prism is a code-first command framework that lets you build commands directly in Java with a fluent, type-safe API. **No annotations required.**
 
-<Callout type="warn">
-  Prism is currently in **beta** (`1.0.0-beta.4`). APIs may still change between beta releases.
-</Callout>
+Prism is currently in **beta** (`1.0.0-beta.5`). APIs may still change between beta releases.
 
 ```java
 new PrismBukkitCommand("heal")
@@ -29,7 +27,7 @@ Most command frameworks lean on annotations and reflection: you describe a comma
 - **Compile-time safety.** Arguments, executors and requirements are real typed objects, not strings buried in annotations.
 - **Composability.** Commands are values. Build them in loops, share argument definitions and assemble trees programmatically.
 - **Discoverability.** Your IDE's autocomplete is the documentation. Everything hangs off one builder.
-- **One API, many platforms.** The core is platform-agnostic; Spigot, Paper (with native Brigadier support) and others plug in on top.
+- **One API, many platforms.** The core is platform-agnostic; Spigot, Paper (with native Brigadier support), Velocity, BungeeCord and others plug in on top.
 
 ## Features
 
@@ -41,18 +39,21 @@ Most command frameworks lean on annotations and reflection: you describe a comma
 - Permissions and usage requirements at the command and argument level
 - Per-sender-type executors for players, console, remote console, command blocks and proxied senders
 - Native Brigadier integration (client-side validation, colored syntax, native suggestions) with an automatic legacy fallback
+- Velocity and BungeeCord support built on the same Brigadier tree builder
 - Built-in help generator that renders clickable usage for a command tree
 - Runtime registration and unregistration of commands
 - Shaded bundles, so you ship a single dependency
 
 ## Supported platforms at a glance
 
-| Platform | Artifact | Status | Minecraft |
-| --- | --- | --- | --- |
-| Spigot (and forks) | `prism-spigot` | Supported | 1.13 → 1.21 and 26.x (Brigadier), legacy fallback |
-| Paper (and forks) | `prism-paper` | Supported | Same range, plus a Paper-native adapter |
-| Brigadier | Bundled in both | Supported | 1.13 → 1.21 and 26.x |
-| JDA (Discord) | `platform/jda` | Skeleton, not published | N/A |
+| Platform               | Artifact           | Status                  | Version support                                   |
+|------------------------|--------------------|-------------------------|---------------------------------------------------|
+| Spigot (and forks)     | `prism-spigot`     | Supported               | 1.13 → 1.21 and 26.x (Brigadier), legacy fallback |
+| Paper (and forks)      | `prism-paper`      | Supported               | Same range, plus a Paper-native adapter           |
+| Brigadier              | Bundled in both    | Supported               | 1.13 → 1.21 and 26.x                              |
+| Velocity               | `prism-velocity`   | Experimental            | Velocity 4.x API, Java 25                         |
+| BungeeCord (and forks) | `prism-bungeecord` | Experimental            | BungeeCord API 1.21, Java 17                      |
+| JDA (Discord)          | `platform/jda`     | Skeleton, not published | N/A                                               |
 
 See [Platforms](/prism/platforms/overview) for the exact versions each adapter is built against.
 
@@ -66,10 +67,10 @@ See [Platforms](/prism/platforms/overview) for the exact versions each adapter i
     The platform-agnostic model: builders, arguments, executors and permissions.
   </Card>
   <Card title="Platforms" href="/prism/platforms/overview">
-    Spigot, Paper, Brigadier and JDA in detail, including version support.
+    Spigot, Paper, Velocity, BungeeCord, Brigadier and JDA in detail, including version support.
   </Card>
   <Card title="Custom Platform" href="/prism/custom-platform">
-    Add Prism to any host in six steps.
+    Add Prism to any host in a few steps.
   </Card>
 </Cards>
 

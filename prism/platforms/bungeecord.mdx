@@ -1,0 +1,109 @@
+---
+title: BungeeCord
+description: Register Prism commands on BungeeCord and its forks.
+---
+
+<Callout type="warn">
+  The BungeeCord platform is **experimental**. It targets **Java 17** and the **BungeeCord API 1.21**. The example plugin runs on Waterfall 1.21.
+</Callout>
+
+The BungeeCord platform (`prism-bungeecord`) reuses the core builder and the Brigadier tree builder, so commands, subcommands, argument trees, optional arguments and suggestions work as described in the [core docs](/prism/core/overview). The command class is `BungeecordCommand`, and the sender is BungeeCord's `CommandSender`.
+
+## Installation
+
+```kotlin
+dependencies {
+    implementation("dev.gurwi:prism-bungeecord:1.0.0-beta.5")
+    implementation("com.mojang:brigadier:1.0.18")
+}
+```
+
+There is no bundle. The module pulls in `prism-core` and `prism-brigadier-api`. BungeeCord does not expose Brigadier to plugins, so shade `com.mojang:brigadier` into your plugin jar as well.
+
+## Setup
+
+Create the platform in `onEnable` and register commands right after.
+
+```java
+public class MyPlugin extends Plugin {
+
+    private BungeecordPlatform platform;
+
+    @Override
+    public void onEnable() {
+        this.platform = BungeecordPlatform.configure(this).init();
+
+        new BungeecordCommand("hello")
+                .withOptionalArguments(new IntegerArgument("n", 0, 10))
+                .executes((sender, args) -> sender.sendMessage("Hello World!"))
+                .register(platform);
+    }
+}
+```
+
+`register(...)` adds one BungeeCord `Command` per label (name and aliases) to the `PluginManager`. Input is parsed and executed by a Brigadier dispatcher behind it, and tab completion comes from the same tree. Unregistering a command removes those commands again.
+
+## Executors
+
+| Method                 | Sender type            |
+|------------------------|------------------------|
+| `executes(...)`        | Any `CommandSender`    |
+| `executesPlayer(...)`  | `ProxiedPlayer`        |
+| `executesConsole(...)` | Console                |
+
+A sender that has no matching executor gets "This command cannot be run by this sender".
+
+## Command tree injection
+
+BungeeCord's own tab completion does not know about Prism's argument types. To fix that, Prism hooks each player's connection on login and rewrites the command packet sent to the client, so the client sees your real command tree with typed arguments and native syntax highlighting.
+
+This relies on BungeeCord internals. If the layout is not what Prism expects, it logs a message and carries on without injection: commands still run, and tab completion still works through the regular BungeeCord path.
+
+You can turn injection off:
+
+```java
+BungeecordPlatform platform = BungeecordPlatform.configure(this)
+        .disableCommandTreeInjection()
+        .init();
+```
+
+## Permissions and requirements
+
+```java
+new BungeecordCommand("admin")
+        .withPermission("myplugin.admin", "myplugin.staff")
+        .withPlayerRequirement(player -> player.getServer() != null)
+        .executesPlayer((player, args) -> player.sendMessage("Hello admin"))
+        .register(platform);
+```
+
+Permissions are only enforced for `ProxiedPlayer` senders: the console always passes. Available requirement helpers are `withRequirement`, `withPlayerRequirement` and `withConsoleRequirement`.
+
+BungeeCord cannot enumerate the permissions a player holds, so `BungeecordPermission.startsWith(prefix, knownPermissions)` works the same way as on Velocity: it tests the nodes you supply.
+
+## Arguments
+
+BungeeCord arguments live in `dev.gurwi.prism.bungeecord.argument` and extend `BungeecordArgument`. Each one wraps a Brigadier `ArgumentType`.
+
+| Category       | Arguments                                                                                                                                   |
+|----------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| **Primitives** | `StringArgument`, `GreedyStringArgument`, `QuotedStringArgument`, `BooleanArgument`, `IntegerArgument`, `LongArgument`, `FloatArgument`, `DoubleArgument` |
+| **Ranges**     | `IntegerRangeArgument`, `LongRangeArgument`, `FloatRangeArgument`, `DoubleRangeArgument`                                                    |
+| **Other**      | `EnumArgument`, `LiteralArgument`                                                                                                           |
+
+Greedy arguments must be the last argument of a command and cannot have children.
+
+## Differences from Bukkit
+
+| Topic                   | Bukkit platforms                              | BungeeCord                            |
+|-------------------------|-----------------------------------------------|---------------------------------------|
+| Command class           | `PrismBukkitCommand`                          | `BungeecordCommand`                   |
+| Sender                  | `CommandSender`                               | `CommandSender` (BungeeCord's)        |
+| Plugin handle           | `JavaPlugin`                                  | `Plugin`                              |
+| Executors               | Player, console, remote console, proxy, block | Generic, player, console              |
+| Operators               | Always pass permission checks                 | No operator concept                   |
+| Non-player permissions  | Checked normally                              | Console always passes                 |
+| `startsWith` permission | Matches effective permissions                 | Matches a supplied set of known nodes |
+| Client-side tree        | Native Brigadier                              | Optional packet injection             |
+| Brigadier fallback      | Legacy registrar                              | None, Brigadier only                  |
+| Suggestion tooltips     | `LiteralMessage`                              | Not supported                         |

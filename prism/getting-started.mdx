@@ -3,21 +3,26 @@ title: Getting Started
 description: Install Prism, create a platform and register your first command.
 ---
 
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
 ## Requirements
 
 - **Java 11** or newer for building (the library targets Java 11)
 - A Spigot or Paper server. Minecraft **1.13 → 1.21** and **26.x** have Brigadier adapters; see [Platforms](/prism/platforms/overview) and [Brigadier](/prism/platforms/brigadier#version-support) for the exact versions
+- Or a proxy: **Velocity** (Java 25) or **BungeeCord** (Java 17). See [Velocity](/prism/platforms/velocity) and [BungeeCord](/prism/platforms/bungeecord)
 
 ## Installation
 
 Prism is published on Maven Central under the group ID `dev.gurwi`.
 
-| Server software | Artifact ID |
-| --- | --- |
-| Paper | `prism-paper` |
-| Spigot | `prism-spigot` |
+| Server software | Artifact ID        |
+|-----------------|--------------------|
+| Paper           | `prism-paper`      |
+| Spigot          | `prism-spigot`     |
+| Velocity        | `prism-velocity`   |
+| BungeeCord      | `prism-bungeecord` |
 
-Each artifact is a self-contained bundle that already includes the core, the Bukkit layer and the matching Brigadier adapters, so you only add **one** dependency.
+The Paper and Spigot artifacts are self-contained bundles that already include the core, the Bukkit layer and the matching Brigadier adapters, so you only add **one** dependency.
 
 <Tabs items={['Gradle (Kotlin)', 'Gradle (Groovy)', 'Maven']}>
   <Tab value="Gradle (Kotlin)">
@@ -27,7 +32,7 @@ repositories {
 }
 
 dependencies {
-    implementation("dev.gurwi:prism-paper:1.0.0-beta.4")
+    implementation("dev.gurwi:prism-paper:1.0.0-beta.5")
 }
 ```
   </Tab>
@@ -38,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'dev.gurwi:prism-paper:1.0.0-beta.4'
+    implementation 'dev.gurwi:prism-paper:1.0.0-beta.5'
 }
 ```
   </Tab>
@@ -47,23 +52,23 @@ dependencies {
 <dependency>
     <groupId>dev.gurwi</groupId>
     <artifactId>prism-paper</artifactId>
-    <version>1.0.0-beta.4</version>
+    <version>1.0.0-beta.5</version>
 </dependency>
 ```
   </Tab>
 </Tabs>
 
-Swap `prism-paper` for `prism-spigot` if you target Spigot. The individual modules (`prism-core`, `prism-bukkit`, `prism-brigadier` and `prism-brigadier-minecraft`) are published too, but most projects should use a bundle.
+Swap `prism-paper` for `prism-spigot` if you target Spigot. The individual modules (`prism-core`, `prism-bukkit`, `prism-brigadier-api` and `prism-brigadier-minecraft`) are published too, but most Minecraft server projects should use a bundle.
 
-<Callout type="warn">
-  Prism is a **library, not a standalone plugin**. Shade it into your own plugin jar (for example with the [Shadow](https://github.com/GradleUp/shadow) plugin) and **relocate** it to avoid conflicts with other plugins that bundle Prism.
-</Callout>
+**Velocity and BungeeCord have no bundle.** Depend on the platform module directly; it pulls in `prism-core` and `prism-brigadier-api`. Velocity ships Brigadier itself. BungeeCord does not expose it to plugins, so also shade `com.mojang:brigadier` into your BungeeCord plugin.
+
+Prism is a **library, not a standalone plugin**. Shade it into your own plugin jar (for example with the [Shadow](https://github.com/GradleUp/shadow) plugin) and **relocate** it to avoid conflicts with other plugins that bundle Prism.
 
 ## 1. Create the platform
 
-Do this once, in `onEnable`.
+Do this once, in `onEnable` (on Velocity, in the plugin constructor).
 
-<Tabs items={['Paper', 'Spigot']}>
+<Tabs items={['Paper', 'Spigot', 'Velocity', 'BungeeCord']}>
   <Tab value="Paper">
 ```java
 public class MyPlugin extends JavaPlugin {
@@ -90,13 +95,40 @@ public class MyPlugin extends JavaPlugin {
 }
 ```
   </Tab>
+  <Tab value="Velocity">
+```java
+@Plugin(id = "my-plugin")
+public class MyPlugin {
+
+    private final VelocityPlatform platform;
+
+    @Inject
+    public MyPlugin(ProxyServer server) {
+        this.platform = VelocityPlatform.configure(this, server).init();
+    }
+}
+```
+  </Tab>
+  <Tab value="BungeeCord">
+```java
+public class MyPlugin extends Plugin {
+
+    private BungeecordPlatform platform;
+
+    @Override
+    public void onEnable() {
+        this.platform = BungeecordPlatform.configure(this).init();
+    }
+}
+```
+  </Tab>
 </Tabs>
 
 `configure(plugin)` returns a builder with a few options; see [Platform configuration](/prism/platforms/bukkit#platform-configuration).
 
-On startup Prism logs which registrar it chose:
+On Paper and Spigot, Prism logs which registrar it chose on startup:
 
-```text
+```
 [prism] Command registration initialized using BRIGADIER.
 ```
 
@@ -119,6 +151,8 @@ new PrismBukkitCommand("teleport", "tp")
 
 The first constructor argument is the command name; any further strings are aliases. Tab completion, argument parsing and error messages come for free.
 
+On proxies the builder is `VelocityCommand` or `BungeecordCommand`, and the argument set is smaller (no world or location arguments). The rest of the API is identical.
+
 ## Trying the examples
 
-The repository ships a Paper test plugin that exercises most of the API. See [Building from Source](/prism/building-from-source#trying-it-on-a-server).
+The repository ships example plugins for Paper, Velocity and BungeeCord. See [Building from Source](/prism/building-from-source#trying-it-on-a-server).

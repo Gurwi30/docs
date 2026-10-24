@@ -1,11 +1,11 @@
 ---
 title: Building from Source
-description: Project structure, building, testing and trying Prism on a live server.
+description: Project structure, building, testing and trying Prism on a live server or proxy.
 ---
 
 ## Project structure
 
-```text
+```
 prism
 ├── core/                  Platform-agnostic command model
 ├── reflection/            Small reflection helpers shared across platform modules
@@ -13,41 +13,59 @@ prism
 │   ├── bukkit/            Shared Bukkit API layer
 │   ├── spigot/            Spigot platform and registry
 │   ├── paper/             Paper platform and registry
-│   ├── brigadier/         Platform-independent Brigadier builder and adapter
-│   │   └── minecraft/     V1_13 … V1_21, V26 and brigadier-paper adapters
+│   ├── velocity/          Velocity platform and registry
+│   ├── bungeecord/        BungeeCord platform and registry
 │   └── jda/               Discord (JDA) platform, in development
-├── publish/
-│   ├── paper/             Aggregates modules into the prism-paper bundle
-│   └── spigot/            Aggregates modules into the prism-spigot bundle
-├── gradle-plugin/
+├── brigadier/
+│   ├── brigadier-api/     Platform-independent Brigadier builder and adapter
+│   ├── brigadier-minecraft/  Minecraft-facing Brigadier bridge
+│   ├── brigadier-paper/   Paper-native adapter
+│   └── nms/               V1_13 … V1_21 and V26 adapters
+├── bundles/
+│   ├── paper-bundle/      Aggregates modules into the prism-paper bundle
+│   └── spigot-bundle/     Aggregates modules into the prism-spigot bundle
+├── build-logic/
 │   └── spigot-nms/        Gradle plugin for Spigot NMS reobfuscation
 ├── buildSrc/              Shared publishing conventions
-└── test/plugin/           Paper test plugin
+├── plugin/
+│   └── bukkit-plugin/     Standalone Prism plugin
+└── examples/
+    ├── paper-plugin/      Paper example plugin
+    ├── velocity-plugin/   Velocity example plugin
+    └── bungeecord-plugin/ BungeeCord example plugin
 ```
 
 ## Requirements
 
 - A JDK that Gradle can use for toolchains. Gradle's toolchain resolver can download missing JDKs.
+- Gradle itself must run on JDK 25 or newer while the Velocity module is part of the build.
 - No separate Gradle install: use the wrapper.
 
-| Part | Java |
-| --- | --- |
-| Library (core, Bukkit layer, platforms) | 17 |
-| `V1_20`, `V1_21` adapters | 21 |
-| `V26` and `brigadier-paper` adapters | 25 |
-| Unit tests | 21 |
-| CI (`./gradlew test`) and the Paper test plugin | 25 |
+| Part                                               | Java |
+|----------------------------------------------------|------|
+| Library (core, Bukkit layer, Spigot/Paper)         | 11   |
+| BungeeCord platform                                | 17   |
+| `V1_13` – `V1_17` adapters                         | 16   |
+| `V1_18`, `V1_19` adapters                          | 17   |
+| `V1_20`, `V1_21` adapters                          | 21   |
+| `V26` and `brigadier-paper` adapters               | 25   |
+| Velocity platform                                  | 25   |
+| Unit tests                                         | 21   |
+| CI (`./gradlew test`), Paper and Velocity examples | 25   |
+| BungeeCord example                                 | 21   |
 
-Each version adapter is compiled against its own Spigot version (and `brigadier-paper` against the Paper 26.3 dev bundle). The `spigot-nms` Gradle plugin in `gradle-plugin/` handles Spigot NMS reobfuscation for those modules.
+Each version adapter is compiled against its own Spigot version (and `brigadier-paper` against the Paper 26.3 dev bundle). The `spigot-nms` Gradle plugin in `build-logic/` handles Spigot NMS reobfuscation for those modules.
 
 ## Modules and bundles
 
-| Bundle | Contains |
-| --- | --- |
-| `prism-spigot` | core, Bukkit layer, Spigot platform, Brigadier layer and all version adapters except `brigadier-paper` |
-| `prism-paper` | core, Bukkit layer, Paper platform, Brigadier layer and the Paper adapter (plus the version adapters) |
+| Artifact           | Contains                                                                                               |
+|--------------------|--------------------------------------------------------------------------------------------------------|
+| `prism-spigot`     | core, Bukkit layer, Spigot platform, Brigadier layer and all version adapters except `brigadier-paper` |
+| `prism-paper`      | core, Bukkit layer, Paper platform, Brigadier layer and the Paper adapter (plus the version adapters)  |
+| `prism-velocity`   | Velocity platform. Depends on `prism-core` and `prism-brigadier-api`                                   |
+| `prism-bungeecord` | BungeeCord platform. Depends on `prism-core` and `prism-brigadier-api`                                 |
 
-Published coordinates use the group `dev.gurwi` and the `prism-…` artifact IDs.
+`prism-core`, `prism-bukkit`, `prism-brigadier-api` and `prism-brigadier-minecraft` are published on their own too. Published coordinates use the group `dev.gurwi` and the `prism-…` artifact IDs.
 
 ## Build and test
 
@@ -66,17 +84,27 @@ On Windows, use `gradlew.bat`. Tests use JUnit with MockBukkit (`mockbukkit-v1.2
 
 ## Trying it on a server
 
-The `test/plugin` module exercises most of the API (subcommands, argument trees, flags, async and sync suggestions and many built-in arguments).
+The `examples/paper-plugin` module exercises most of the API (subcommands, argument trees, flags, async and sync suggestions and many built-in arguments).
 
 ```bash
-# Start a local Paper 26.3 server (Java 25) with the test plugin
-./gradlew :test:plugin:runServer
+# Start a local Paper server with the example plugin
+./gradlew :examples:paper-plugin:runServer
 
 # Or just build the plugin jar
-./gradlew :test:plugin:shadowJar
+./gradlew :examples:paper-plugin:shadowJar
 ```
 
-Its source, [`TestPlugin.java`](https://github.com/AthlasStudios/prism/blob/main/test/plugin/src/main/java/dev/gurwi/prism/test/plugin/TestPlugin.java), doubles as a set of usage examples.
+Its source, [`PaperExample.java`](https://github.com/AthlasStudios/prism/blob/main/examples/paper-plugin/src/main/java/dev/gurwi/prism/example/paper/plugin/PaperExample.java), doubles as a set of usage examples.
+
+For the proxies, each example is a minimal plugin that registers one command:
+
+```bash
+# Local Velocity proxy
+./gradlew :examples:velocity-plugin:runVelocity
+
+# Local Waterfall proxy
+./gradlew :examples:bungeecord-plugin:runWaterfall
+```
 
 ## Contributing
 

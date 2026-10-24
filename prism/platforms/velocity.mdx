@@ -1,0 +1,110 @@
+---
+title: Velocity
+description: Register Prism commands on a Velocity proxy.
+---
+
+<Callout type="warn">
+  The Velocity platform is **experimental**. It targets **Java 25** and the **Velocity 4.x** API.
+</Callout>
+
+The Velocity platform (`prism-velocity`) reuses the core builder and the Brigadier tree builder, so commands, subcommands, argument trees, optional arguments and suggestions work as described in the [core docs](/prism/core/overview). The command class is `VelocityCommand`, and the sender is Velocity's `CommandSource`.
+
+Velocity has no legacy fallback: commands are always registered through Brigadier.
+
+## Installation
+
+```kotlin
+dependencies {
+    implementation("dev.gurwi:prism-velocity:1.0.0-beta.5")
+}
+```
+
+There is no bundle. The module pulls in `prism-core` and `prism-brigadier-api`, and Velocity provides Brigadier itself.
+
+## Setup
+
+Create the platform in your plugin constructor and register commands from your `ProxyInitializeEvent` handler or later.
+
+```java
+@Plugin(id = "my-plugin")
+public class MyPlugin {
+
+    private final ProxyServer server;
+    private final VelocityPlatform platform;
+
+    @Inject
+    public MyPlugin(ProxyServer server) {
+        this.server = server;
+        this.platform = VelocityPlatform.configure(this, server).init();
+    }
+
+    @Subscribe
+    public void onProxyInit(ProxyInitializeEvent event) {
+        new VelocityCommand("hello")
+                .executes((source, args) -> {
+                    source.sendPlainMessage("Hello World!");
+                })
+                .register(platform);
+    }
+}
+```
+
+- `VelocityPlatform.configure(plugin, server)` takes your plugin instance as a plain `Object`. Velocity has no plugin handle: `@Plugin` is an annotation, and the instance of your main class is the plugin. The class must carry `@Plugin`, otherwise `configure` throws an `IllegalArgumentException`.
+- Prism does not register any Velocity event listener. `register(...)` talks to Velocity's `CommandManager` immediately, so calling it before `ProxyInitializeEvent` is your responsibility to avoid.
+- Velocity injects the SLF4J `Logger`, not `java.util.logging.Logger`.
+
+## Executors
+
+| Method                | Sender type                  |
+|-----------------------|------------------------------|
+| `executes(...)`       | Any `CommandSource`          |
+| `executesPlayer(...)` | `Player`                     |
+| `executesConsole(...)`| `ConsoleCommandSource`       |
+
+A sender that has no matching executor gets "This command cannot be run by this sender".
+
+## Permissions
+
+Velocity has no operator system, so there is no `OP` permission. Permissions go through `CommandSource#hasPermission`, and `ConsoleCommandSource` always passes.
+
+```java
+VelocityPermission.of("myplugin.admin");
+VelocityPermission.of("myplugin.admin", "myplugin.staff");
+```
+
+<Callout type="warn">
+  Without a permission plugin such as LuckPerms, Velocity's default provider returns `true` for every `hasPermission` call, so any player passes any permission check. Don't rely on permissions for anything sensitive unless a permission plugin is installed.
+</Callout>
+
+Velocity cannot enumerate the permissions a source holds, so a prefix check works against a known set of nodes instead of the sender's effective permissions:
+
+```java
+VelocityPermission.startsWith("myplugin.admin.", knownPermissions);
+```
+
+`knownPermissions` is the collection of nodes your commands declare. Only nodes in that collection are tested, and each one is checked with `hasPermission`. Use the LuckPerms API directly if you need to match arbitrary nodes at runtime.
+
+## Arguments
+
+Velocity arguments live in `dev.gurwi.prism.velocity.argument` and extend `VelocityArgument`. Each one wraps a Brigadier `ArgumentType`.
+
+| Category       | Arguments                                                                                                                                   |
+|----------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| **Primitives** | `StringArgument`, `GreedyStringArgument`, `QuotedStringArgument`, `BooleanArgument`, `IntegerArgument`, `LongArgument`, `FloatArgument`, `DoubleArgument` |
+| **Ranges**     | `IntegerRangeArgument`, `LongRangeArgument`, `FloatRangeArgument`, `DoubleRangeArgument`                                                    |
+| **Other**      | `EnumArgument`, `LiteralArgument`                                                                                                           |
+
+Greedy arguments must be the last argument of a command and cannot have children.
+
+## Differences from Bukkit
+
+| Topic                   | Bukkit platforms              | Velocity                              |
+|-------------------------|-------------------------------|---------------------------------------|
+| Command class           | `PrismBukkitCommand`          | `VelocityCommand`                     |
+| Sender                  | `CommandSender`               | `CommandSource`                       |
+| Plugin handle           | `JavaPlugin`                  | `Object` (your plugin instance)       |
+| Registration timing     | `onEnable`                    | `ProxyInitializeEvent` or later       |
+| Operators               | Always pass permission checks | No operator concept                   |
+| `startsWith` permission | Matches effective permissions | Matches a supplied set of known nodes |
+| Brigadier fallback      | Legacy registrar              | None, Brigadier only                  |
+| Suggestion tooltips     | `LiteralMessage`              | `VelocityBrigadierMessage`            |
